@@ -39,13 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.ui.theme.VaultTheme
@@ -79,7 +76,6 @@ fun CreateVaultContent(
             masterPassword.isNotBlank() && confirmPassword.isNotBlank() && passwordsMatch
 
     val fieldShape = MaterialTheme.shapes.large
-    val errorColor = MaterialTheme.colorScheme.error
 
     Column(
         modifier = Modifier
@@ -108,7 +104,7 @@ fun CreateVaultContent(
         OutlinedTextField(
             value = vaultName,
             onValueChange = { vaultName = it },
-            label = { MandatoryLabel("Vault Name", errorColor) },
+            label = { Text("Vault Name") },
             singleLine = true,
             isError = vaultNameDirty && vaultName.isBlank(),
             supportingText = if (vaultNameDirty && vaultName.isBlank()) {
@@ -126,7 +122,7 @@ fun CreateVaultContent(
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { MandatoryLabel("Username", errorColor) },
+            label = { Text("Username") },
             singleLine = true,
             isError = usernameDirty && username.isBlank(),
             supportingText = if (usernameDirty && username.isBlank()) {
@@ -144,7 +140,7 @@ fun CreateVaultContent(
         OutlinedTextField(
             value = masterPassword,
             onValueChange = { masterPassword = it },
-            label = { MandatoryLabel("Master Password", errorColor) },
+            label = { Text("Master Password") },
             singleLine = true,
             isError = masterPasswordDirty && masterPassword.isBlank(),
             supportingText = if (masterPasswordDirty && masterPassword.isBlank()) {
@@ -201,7 +197,7 @@ fun CreateVaultContent(
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { MandatoryLabel("Confirm Password", errorColor) },
+            label = { Text("Confirm Password") },
             singleLine = true,
             isError = confirmPasswordDirty && (confirmPassword.isBlank() || !passwordsMatch),
             supportingText = when {
@@ -304,16 +300,6 @@ fun CreateVaultContent(
 
         Spacer(modifier = Modifier.height(32.dp))
     }
-}
-
-@Composable
-private fun MandatoryLabel(text: String, errorColor: Color) {
-    Text(buildAnnotatedString {
-        append(text)
-        withStyle(SpanStyle(color = errorColor)) {
-            append(" *")
-        }
-    })
 }
 
 @Composable
