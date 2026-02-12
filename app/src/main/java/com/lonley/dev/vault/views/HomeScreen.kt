@@ -25,11 +25,11 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -121,64 +121,31 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Feature cards
-            Row(
+            // Features
+            OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                shape = MaterialTheme.shapes.extraLarge
             ) {
-                FeatureCard(
-                    modifier = Modifier.weight(1f),
+                FeatureItem(
                     icon = Icons.Outlined.Lock,
                     title = "Encrypted",
                     description = "AES-256 bit encryption at rest",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = MaterialTheme.colorScheme.primary
                 )
-                FeatureCard(
-                    modifier = Modifier.weight(1f),
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                FeatureItem(
                     icon = Icons.Outlined.Smartphone,
                     title = "Offline",
                     description = "Never leaves your device",
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = MaterialTheme.colorScheme.secondary
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Zero-knowledge card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                ),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Row(
-                    modifier = Modifier.padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.VerifiedUser,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Zero-Knowledge Architecture",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "Your master password is never stored or transmitted. We can't access your data — ever.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                FeatureItem(
+                    icon = Icons.Outlined.VerifiedUser,
+                    title = "Zero-Knowledge",
+                    description = "Master password never stored or transmitted",
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -232,38 +199,36 @@ fun HomeScreen(
 }
 
 @Composable
-private fun FeatureCard(
-    modifier: Modifier = Modifier,
+private fun FeatureItem(
     icon: ImageVector,
     title: String,
     description: String,
-    containerColor: Color,
-    contentColor: Color
+    tint: Color
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = MaterialTheme.shapes.extraLarge
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Column {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = contentColor
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
