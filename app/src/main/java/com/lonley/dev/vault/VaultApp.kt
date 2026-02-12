@@ -20,7 +20,7 @@ fun VaultApp() {
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
             HomeScreen(
-                onVaultCreated = { vaultName, username, masterPassword, encryptionType ->
+                onVaultCreated = { vaultName, username, email, masterPassword, encryptionType ->
                     // TODO: Handle vault creation
                 },
                 onUploadClick = { /* TODO */ }

@@ -50,11 +50,12 @@ import com.lonley.dev.vault.ui.theme.VaultTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateVaultContent(
-    onConfirm: (vaultName: String, username: String, masterPassword: String, encryptionType: String) -> Unit,
+    onConfirm: (vaultName: String, username: String, email: String, masterPassword: String, encryptionType: String) -> Unit,
     onCancel: () -> Unit
 ) {
     var vaultName by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var masterPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -64,6 +65,7 @@ fun CreateVaultContent(
     // Dirty tracking — errors show only after the user has left the field
     var vaultNameDirty by remember { mutableStateOf(false) }
     var usernameDirty by remember { mutableStateOf(false) }
+    var emailDirty by remember { mutableStateOf(false) }
     var masterPasswordDirty by remember { mutableStateOf(false) }
     var confirmPasswordDirty by remember { mutableStateOf(false) }
 
@@ -72,7 +74,7 @@ fun CreateVaultContent(
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     val passwordsMatch = masterPassword == confirmPassword
-    val isFormValid = vaultName.isNotBlank() && username.isNotBlank() &&
+    val isFormValid = vaultName.isNotBlank() && username.isNotBlank() && email.isNotBlank() &&
             masterPassword.isNotBlank() && confirmPassword.isNotBlank() && passwordsMatch
 
     val fieldShape = MaterialTheme.shapes.large
@@ -131,6 +133,23 @@ fun CreateVaultContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { if (!it.isFocused) usernameDirty = true },
+            shape = fieldShape
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("email") },
+            singleLine = true,
+            isError = emailDirty && email.isBlank(),
+            supportingText = if (emailDirty && email.isBlank()) {
+                { Text("email is required") }
+            } else null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { if (!it.isFocused) emailDirty = true },
             shape = fieldShape
         )
 
@@ -283,7 +302,7 @@ fun CreateVaultContent(
                 )
             }
             Button(
-                onClick = { onConfirm(vaultName, username, masterPassword, selectedEncryption) },
+                onClick = { onConfirm(vaultName, username, email, masterPassword, selectedEncryption) },
                 enabled = isFormValid,
                 modifier = Modifier
                     .weight(1f)
@@ -355,7 +374,7 @@ private fun calculateStrength(password: String): PasswordStrength {
 private fun CreateVaultContentPreview() {
     VaultTheme {
         CreateVaultContent(
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onCancel = {}
         )
     }

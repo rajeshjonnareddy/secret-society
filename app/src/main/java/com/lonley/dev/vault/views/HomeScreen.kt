@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onUploadClick: () -> Unit = {},
-    onVaultCreated: (vaultName: String, username: String, masterPassword: String, encryptionType: String) -> Unit = { _, _, _, _ -> }
+    onVaultCreated: (vaultName: String, username: String, email: String, masterPassword: String, encryptionType: String) -> Unit = { _, _, _, _, _ -> }
 ) {
     val sloganParts = listOf("Data", "Device", "Rules")
     var currentSloganIndex by remember { mutableIntStateOf(0) }
@@ -215,11 +215,11 @@ fun HomeScreen(
             sheetState = sheetState
         ) {
             CreateVaultContent(
-                onConfirm = { vaultName, username, masterPassword, encryptionType ->
+                onConfirm = { vaultName, username, email, masterPassword, encryptionType ->
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {
                             showCreateSheet = false
-                            onVaultCreated(vaultName, username, masterPassword, encryptionType)
+                            onVaultCreated(vaultName, username, email,masterPassword, encryptionType)
                         }
                     }
                 },
