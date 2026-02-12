@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
 import com.lonley.dev.vault.ui.theme.VaultTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,8 +17,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            VaultTheme() {
-                Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
+            VaultTheme {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent
+                ) { padding ->
                     Box(modifier = Modifier.padding(padding)) {
                         VaultApp()
                     }

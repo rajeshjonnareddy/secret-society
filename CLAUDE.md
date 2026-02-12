@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Vault is a local-first encryption password manager for Android. Built with Kotlin and Jetpack Compose, targeting API 24+ (Android 7.0) through API 36 (Android 15). The app emphasizes offline security — no cloud, no leaks.
 
+**Strictly Kotlin + Jetpack Compose.** All UI must use Compose — no XML layouts, no Views. All code must be Kotlin — no Java.
+
 ## Build Commands
 
 ```bash
