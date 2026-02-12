@@ -25,17 +25,22 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,14 +51,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onUploadClick: () -> Unit = {},
-    onCreateNewClick: () -> Unit = {}
+    onVaultCreated: (vaultName: String, username: String, masterPassword: String, encryptionType: String) -> Unit = { _, _, _, _ -> }
 ) {
     val sloganParts = listOf("Data", "Device", "Rules")
     var currentSloganIndex by remember { mutableIntStateOf(0) }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showCreateSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -153,7 +164,7 @@ fun HomeScreen(
 
         // Fixed bottom CTAs
         Button(
-            onClick = onCreateNewClick,
+            onClick = { showCreateSheet = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -195,6 +206,30 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // Create Vault Bottom Sheet
+    if (showCreateSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCreateSheet = false },
+            sheetState = sheetState
+        ) {
+            CreateVaultContent(
+                onConfirm = { vaultName, username, masterPassword, encryptionType ->
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) {
+                            showCreateSheet = false
+                            onVaultCreated(vaultName, username, masterPassword, encryptionType)
+                        }
+                    }
+                },
+                onCancel = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) showCreateSheet = false
+                    }
+                }
+            )
+        }
     }
 }
 
