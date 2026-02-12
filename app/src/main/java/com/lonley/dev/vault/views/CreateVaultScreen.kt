@@ -65,7 +65,6 @@ fun CreateVaultContent(
     // Dirty tracking — errors show only after the user has left the field
     var vaultNameDirty by remember { mutableStateOf(false) }
     var usernameDirty by remember { mutableStateOf(false) }
-    var emailDirty by remember { mutableStateOf(false) }
     var masterPasswordDirty by remember { mutableStateOf(false) }
     var confirmPasswordDirty by remember { mutableStateOf(false) }
 
@@ -74,7 +73,7 @@ fun CreateVaultContent(
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     val passwordsMatch = masterPassword == confirmPassword
-    val isFormValid = vaultName.isNotBlank() && username.isNotBlank() && email.isNotBlank() &&
+    val isFormValid = vaultName.isNotBlank() && username.isNotBlank() &&
             masterPassword.isNotBlank() && confirmPassword.isNotBlank() && passwordsMatch
 
     val fieldShape = MaterialTheme.shapes.large
@@ -141,15 +140,9 @@ fun CreateVaultContent(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("email") },
+            label = { Text("Email (Optional)") },
             singleLine = true,
-            isError = emailDirty && email.isBlank(),
-            supportingText = if (emailDirty && email.isBlank()) {
-                { Text("email is required") }
-            } else null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { if (!it.isFocused) emailDirty = true },
+            modifier = Modifier.fillMaxWidth(),
             shape = fieldShape
         )
 
