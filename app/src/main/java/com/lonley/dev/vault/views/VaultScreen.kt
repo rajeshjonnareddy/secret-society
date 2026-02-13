@@ -298,15 +298,13 @@ fun VaultScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             Text(
                 text = "Your passwords, secured.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             SearchGlassBar(
                 query = searchQuery,
@@ -314,7 +312,7 @@ fun VaultScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(0.dp))
 
             // ── Filter chips (horizontally scrollable) ──
             LazyRow(
