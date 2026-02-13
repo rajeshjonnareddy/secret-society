@@ -51,8 +51,17 @@ MainActivity (entry point, sets up Scaffold + VaultTheme)
 
 - **Stateless composables with callback params** — screens receive navigation callbacks rather than holding NavController references
 - **Centralized dependency versions** — all versions managed in `gradle/libs.versions.toml`
-- **No state management layer yet** — no ViewModels, Room, or DI framework; local `mutableStateOf` used directly in composables
+- **ViewModel for vault state** — `VaultViewModel` manages password entries and vault file I/O; screens collect `StateFlow`
 - **Security-conscious defaults** — backup and data extraction rules are configured to be empty (no cloud backup), aligning with the local-first philosophy
+- **VaultLogger** — `util/VaultLogger.kt` writes to both logcat and `vault.log` file in `context.filesDir`. Initialize with `VaultLogger.init(context)` in `MainActivity.onCreate()`. Use `VaultLogger.d/i/w/e(area, message)` throughout
+
+## Screen Layout Rules
+
+- **MainActivity owns the outer Scaffold** — it handles system bar insets (edge-to-edge). All inner screens must NOT add their own system bar padding.
+- **Inner Scaffolds must use `contentWindowInsets = WindowInsets(0, 0, 0, 0)`** — prevents double padding from nested Scaffolds. Only use an inner Scaffold when the screen needs a FAB or bottom bar.
+- **Consistent top spacing** — all screens start content with `Spacer(modifier = Modifier.height(12.dp))` after the outer Scaffold padding. This is the only vertical gap between system bar and content. Do NOT add extra top padding.
+- **Horizontal padding** — all screen content uses `24.dp` horizontal padding, matching HomeScreen's layout.
+- **Brand heading** — screen titles use `MaterialTheme.typography.displayLarge`, `FontWeight.Bold`, `MaterialTheme.colorScheme.primary`, left-aligned. Same style as HomeScreen's "Vault" brand text.
 
 ## Package Structure
 

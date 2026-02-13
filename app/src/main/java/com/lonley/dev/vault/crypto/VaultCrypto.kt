@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.lambdapioneer.argon2kt.Argon2Kt
 import com.lambdapioneer.argon2kt.Argon2Mode
+import com.lonley.dev.vault.util.VaultLogger
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -30,6 +31,7 @@ object VaultCrypto {
     private const val ALGORITHM_CHACHA20: Byte = 0x02
 
     fun encrypt(plaintextBytes: ByteArray, password: String, algorithm: String): ByteArray {
+        VaultLogger.d("Crypto", "Encrypting ${plaintextBytes.size} bytes with $algorithm")
         val algorithmId = when (algorithm) {
             "AES-256-GCM" -> ALGORITHM_AES_GCM
             "AES-256-CBC" -> ALGORITHM_AES_CBC
@@ -78,6 +80,7 @@ object VaultCrypto {
 
         // Clear derived key from memory
         derivedKey.fill(0)
+        VaultLogger.d("Crypto", "Encryption complete: ciphertext=${ciphertext.size} bytes, iv=${iv.size} bytes")
 
         // Assemble binary output
         val totalSize = 1 + 1 + 4 + 4 + 1 + 1 + salt.size + 1 + iv.size + ciphertext.size
@@ -95,7 +98,68 @@ object VaultCrypto {
         }.array()
     }
 
+    fun decrypt(encryptedBytes: ByteArray, password: String): ByteArray {
+        VaultLogger.d("Crypto", "Decrypting ${encryptedBytes.size} bytes")
+        val buffer = ByteBuffer.wrap(encryptedBytes)
+
+        val version = buffer.get()
+        if (version != VERSION) {
+            throw IllegalArgumentException("Unsupported vault version: $version")
+        }
+
+        val algorithmId = buffer.get()
+
+        val memoryCostKb = buffer.getInt()
+        val iterations = buffer.getInt()
+        val parallelism = buffer.get().toInt() and 0xFF
+
+        val saltLength = buffer.get().toInt() and 0xFF
+        val salt = ByteArray(saltLength).also { buffer.get(it) }
+
+        val ivLength = buffer.get().toInt() and 0xFF
+        val iv = ByteArray(ivLength).also { buffer.get(it) }
+
+        val ciphertext = ByteArray(buffer.remaining()).also { buffer.get(it) }
+
+        VaultLogger.d("Crypto", "Decrypt header: version=$version, algorithmId=$algorithmId, salt=${saltLength}B, iv=${ivLength}B")
+        val derivedKey = deriveKey(password, salt, memoryCostKb, iterations, parallelism)
+        try {
+            return when (algorithmId) {
+                ALGORITHM_AES_GCM -> {
+                    val keySpec = SecretKeySpec(derivedKey, "AES")
+                    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                    cipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(GCM_TAG_BITS, iv))
+                    cipher.doFinal(ciphertext)
+                }
+                ALGORITHM_AES_CBC -> {
+                    val keySpec = SecretKeySpec(derivedKey, "AES")
+                    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+                    cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(iv))
+                    cipher.doFinal(ciphertext)
+                }
+                ALGORITHM_CHACHA20 -> {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                        throw IllegalArgumentException(
+                            "ChaCha20-Poly1305 requires API 28+ (current: ${Build.VERSION.SDK_INT})"
+                        )
+                    }
+                    decryptChaCha20(derivedKey, iv, ciphertext)
+                }
+                else -> throw IllegalArgumentException("Unknown algorithm ID: $algorithmId")
+            }
+        } finally {
+            derivedKey.fill(0)
+        }
+    }
+
     private fun deriveKey(password: String, salt: ByteArray): ByteArray {
+        return deriveKey(password, salt, ARGON2_MEMORY_KB, ARGON2_ITERATIONS, ARGON2_PARALLELISM)
+    }
+
+    private fun deriveKey(
+        password: String, salt: ByteArray,
+        memoryCostKb: Int, iterations: Int, parallelism: Int
+    ): ByteArray {
         val passwordBytes = password.toByteArray(Charsets.UTF_8)
         try {
             val argon2 = Argon2Kt()
@@ -103,9 +167,9 @@ object VaultCrypto {
                 mode = Argon2Mode.ARGON2_ID,
                 password = passwordBytes,
                 salt = salt,
-                tCostInIterations = ARGON2_ITERATIONS,
-                mCostInKibibyte = ARGON2_MEMORY_KB,
-                parallelism = ARGON2_PARALLELISM,
+                tCostInIterations = iterations,
+                mCostInKibibyte = memoryCostKb,
+                parallelism = parallelism,
                 hashLengthInBytes = KEY_LENGTH_BYTES
             )
             return result.rawHashAsByteArray()
@@ -120,5 +184,13 @@ object VaultCrypto {
         val cipher = Cipher.getInstance("ChaCha20-Poly1305")
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, IvParameterSpec(nonce))
         return cipher.doFinal(plaintext)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun decryptChaCha20(key: ByteArray, nonce: ByteArray, ciphertext: ByteArray): ByteArray {
+        val keySpec = SecretKeySpec(key, "ChaCha20")
+        val cipher = Cipher.getInstance("ChaCha20-Poly1305")
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(nonce))
+        return cipher.doFinal(ciphertext)
     }
 }
