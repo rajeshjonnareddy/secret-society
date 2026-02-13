@@ -33,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -285,64 +284,40 @@ fun VaultScreen(
         matchesSearch && matchesFilter
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddPasswordClick,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add New Password",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(horizontal = 24.dp)
         ) {
-            // ── Header section (matches HomeScreen brand layout) ──
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp)
-            ) {
-                Spacer(modifier = Modifier.height(12.dp))
+            // Brand-style vault name
+            Text(
+                text = vaultName,
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-                // Brand-style vault name
-                Text(
-                    text = vaultName,
-                    style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Spacer(modifier = Modifier.height(4.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Your passwords, secured.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-                Text(
-                    text = "Your passwords, secured.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Spacer(modifier = Modifier.height(12.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SearchGlassBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            SearchGlassBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Filter chips (horizontally scrollable) ──
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 itemsIndexed(filterOptions) { _, filter ->
@@ -376,8 +351,7 @@ fun VaultScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -399,8 +373,7 @@ fun VaultScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -414,7 +387,6 @@ fun VaultScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(
@@ -428,6 +400,23 @@ fun VaultScreen(
                     }
                 }
             }
+        }
+
+        // FAB overlay
+        FloatingActionButton(
+            onClick = onAddPasswordClick,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add New Password",
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }
