@@ -6,6 +6,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.lonley.dev.vault.crypto.VaultCrypto
 import com.lonley.dev.vault.views.HomeScreen
 import org.json.JSONObject
 import java.io.File
@@ -32,18 +33,21 @@ fun VaultApp() {
                         put("email", email)
                         put("encryptionType", encryptionType)
                     }
-                    // TODO: call a private function to encrypt the data with proper schema.
-                    val usersVaultFile = File(context.filesDir, ".$username")
+                    val usersVaultFile = File(context.filesDir, ".$username.vlt")
 
                     try {
-                        usersVaultFile.outputStream().use { outputStream ->
-                            outputStream.write(json.toString().toByteArray())
-                        }
-                        // ... navigation ...
+                        val encryptedBytes = VaultCrypto.encrypt(
+                            plaintextBytes = json.toString().toByteArray(Charsets.UTF_8),
+                            password = masterPassword,
+                            algorithm = encryptionType
+                        )
+                        usersVaultFile.outputStream().use { it.write(encryptedBytes) }
                         // TODO: Redirect to show vault screen with data from the vault.
+                    } catch (e: IllegalArgumentException) {
+                        // ChaCha20 API guard or unknown algorithm
+                        // TODO: Create an Error screen and Redirect and log
                     } catch (e: Exception) {
-                        // ... error handling ...
-                        //TODO: Create an Error screen and Redirect and log
+                        // TODO: Create an Error screen and Redirect and log
                     }
                 },
                 onUploadClick = { /* TODO */ }

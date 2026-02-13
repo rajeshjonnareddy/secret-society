@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.os.Build
 import com.lonley.dev.vault.ui.theme.VaultTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +69,13 @@ fun CreateVaultContent(
     var masterPasswordDirty by remember { mutableStateOf(false) }
     var confirmPasswordDirty by remember { mutableStateOf(false) }
 
-    val encryptionTypes = listOf("AES-256-GCM", "AES-256-CBC", "ChaCha20-Poly1305")
+    val encryptionTypes = buildList {
+        add("AES-256-GCM")
+        add("AES-256-CBC")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            add("ChaCha20-Poly1305")
+        }
+    }
     var selectedEncryption by remember { mutableStateOf(encryptionTypes[0]) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
