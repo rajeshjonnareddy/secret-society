@@ -178,6 +178,24 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                onClick = onBackClick
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Home,
+                        contentDescription = "Back to vault",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = iconSize
+                    )
+                }
+            }
         }
     }
 }
