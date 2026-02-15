@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -70,13 +71,23 @@ fun GlassCard(
     contentPadding: PaddingValues = PaddingValues(0.dp),
     content: @Composable BoxScope.() -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val glassBg = if (isDark) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    }
+    val borderColor = if (isDark) {
+        Color.White.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            // Semi-transparent background
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-            // Thin, subtle border
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .background(glassBg)
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
             .padding(contentPadding),
         content = content
     )
@@ -91,13 +102,24 @@ private fun SearchGlassBar(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
+    val isDark = isSystemInDarkTheme()
+    val glassBg = if (isDark) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    }
+    val borderColor = if (isDark) {
+        Color.White.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    }
 
     Box(
         modifier = modifier
             .height(56.dp)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+            .background(glassBg)
+            .border(1.dp, borderColor, shape)
             .padding(horizontal = 16.dp)
     ) {
         Row(
@@ -148,13 +170,24 @@ fun SearchInputGlassCard(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val roundedShape = RoundedCornerShape(16.dp)
+    val isDark = isSystemInDarkTheme()
+    val glassBg = if (isDark) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    }
+    val borderColor = if (isDark) {
+        Color.White.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    }
 
     Box(
         modifier = modifier
             .height(50.dp)
             .clip(roundedShape)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), roundedShape)
+            .background(glassBg)
+            .border(1.dp, borderColor, roundedShape)
             .padding(horizontal = 16.dp, vertical = 0.dp)
     ) {
         Row(
