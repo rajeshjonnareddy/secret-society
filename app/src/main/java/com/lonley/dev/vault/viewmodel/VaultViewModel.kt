@@ -7,6 +7,7 @@ import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.repository.VaultRepository
+import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.VaultLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,22 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(ThemeMode.System)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+    }
+
+    fun getVaultBytes(): ByteArray? {
+        return vaultFile?.takeIf { it.exists() }?.readBytes()
+    }
+
+    fun getVaultFileName(): String {
+        val name = vaultFile?.name ?: "vault.vlt"
+        return if (name.startsWith(".")) name.substring(1) else name
+    }
 
     private var masterPassword: CharArray? = null
     private var vaultFile: File? = null
@@ -107,7 +124,13 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
 
                 val vaultName = metadata.optString("vaultName", "Vault")
                 VaultLogger.i("ViewModel", "Vault unlocked: $vaultName, ${entries.size} entries")
-                _uiState.value = VaultUiState.Unlocked(vaultName, entries.toList())
+                _uiState.value = VaultUiState.Unlocked(
+                    vaultName = vaultName,
+                    entries = entries.toList(),
+                    username = metadata.optString("username", ""),
+                    email = metadata.optString("email", ""),
+                    encryptionType = encryptionType
+                )
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Unlock failed", e)
                 _uiState.value = VaultUiState.Error(
@@ -138,7 +161,13 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 entries.clear()
 
                 VaultLogger.i("ViewModel", "Vault created: $vaultName")
-                _uiState.value = VaultUiState.Unlocked(vaultName, emptyList())
+                _uiState.value = VaultUiState.Unlocked(
+                    vaultName = vaultName,
+                    entries = emptyList(),
+                    username = username,
+                    email = email,
+                    encryptionType = encryptionType
+                )
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Vault creation failed", e)
                 _uiState.value = VaultUiState.Error("Failed to create vault: ${e.message}", VaultUiState.Locked)
@@ -196,14 +225,39 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
     }
 
     fun lockVault() {
-        masterPassword?.fill('\u0000')
-        masterPassword = null
-        vaultFile = null
-        vaultMetadata = null
-        entries.clear()
-        _uiState.value = VaultUiState.Locked
-        _saveState.value = SaveState.Idle
-        VaultLogger.i("ViewModel", "Vault locked")
+        viewModelScope.launch {
+            // Save the vault before locking so all data is encrypted to disk
+            val file = vaultFile
+            val pw = masterPassword
+            val algorithm = encryptionType
+            val metadata = vaultMetadata
+            if (file != null && pw != null && metadata != null) {
+                try {
+                    repository.saveVault(file, pw, algorithm, metadata, entries.toList())
+                    VaultLogger.i("ViewModel", "Vault saved before lock")
+                } catch (e: Exception) {
+                    VaultLogger.e("ViewModel", "Save before lock failed", e)
+                }
+            }
+
+            // Delete local vault files from storage
+            try {
+                repository.deleteAllVaultFiles()
+                VaultLogger.i("ViewModel", "Local vault files deleted")
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "Failed to delete vault files", e)
+            }
+
+            // Clear in-memory state
+            masterPassword?.fill('\u0000')
+            masterPassword = null
+            vaultFile = null
+            vaultMetadata = null
+            entries.clear()
+            _uiState.value = VaultUiState.Locked
+            _saveState.value = SaveState.Idle
+            VaultLogger.i("ViewModel", "Vault locked and local storage cleared")
+        }
     }
 
     fun noVault() {

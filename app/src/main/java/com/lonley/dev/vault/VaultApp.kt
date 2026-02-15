@@ -43,25 +43,42 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
 import com.lonley.dev.vault.views.HomeScreen
+import com.lonley.dev.vault.views.SettingsScreen
 import com.lonley.dev.vault.views.VaultScreen
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VaultApp() {
+fun VaultApp(viewModel: VaultViewModel) {
     val context = LocalContext.current
-    val viewModel: VaultViewModel = viewModel(
-        factory = VaultViewModel.Factory(context.filesDir)
-    )
 
     val uiState by viewModel.uiState.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+
+    val downloadLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null) {
+            val bytes = viewModel.getVaultBytes()
+            if (bytes != null) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    Toast.makeText(context, "Vault saved", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(context, "No vault data to save", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -158,16 +175,36 @@ fun VaultApp() {
 
         is VaultUiState.Unlocked -> {
             var showAddSheet by remember { mutableStateOf(false) }
+            var showSettings by remember { mutableStateOf(false) }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             val scope = rememberCoroutineScope()
 
-            VaultScreen(
-                vaultName = state.vaultName,
-                passwordEntries = state.entries,
-                isLoading = state.isLoading,
-                onAddPasswordClick = { showAddSheet = true },
-                onBackClick = { viewModel.lockVault() }
-            )
+            val launchDownload = {
+                downloadLauncher.launch(viewModel.getVaultFileName())
+            }
+
+            if (showSettings) {
+                SettingsScreen(
+                    username = state.username,
+                    email = state.email,
+                    encryptionType = state.encryptionType,
+                    themeMode = themeMode,
+                    onThemeModeChange = { viewModel.setThemeMode(it) },
+                    onBackClick = { showSettings = false },
+                    onLockClick = { viewModel.lockVault() },
+                    onDownloadClick = launchDownload
+                )
+            } else {
+                VaultScreen(
+                    vaultName = state.vaultName,
+                    passwordEntries = state.entries,
+                    isLoading = state.isLoading,
+                    onAddPasswordClick = { showAddSheet = true },
+                    onBackClick = { viewModel.lockVault() },
+                    onDownloadClick = launchDownload,
+                    onSettingsClick = { showSettings = true }
+                )
+            }
 
             if (showAddSheet) {
                 ModalBottomSheet(

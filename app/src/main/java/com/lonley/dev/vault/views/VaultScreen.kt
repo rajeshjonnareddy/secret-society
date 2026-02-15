@@ -271,7 +271,9 @@ fun VaultScreen(
     passwordEntries: List<PasswordEntry>,
     isLoading: Boolean = false,
     onAddPasswordClick: () -> Unit,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onDownloadClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -433,18 +435,18 @@ fun VaultScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
-                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onBackClick, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
+                            contentDescription = "Lock vault",
                             tint = iconTint,
                             modifier = iconSize
                         )
                     }
-                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onDownloadClick, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Download,
-                            contentDescription = null,
+                            contentDescription = "Download vault",
                             tint = iconTint,
                             modifier = iconSize
                         )
@@ -457,10 +459,10 @@ fun VaultScreen(
                             modifier = iconSize
                         )
                     }
-                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onSettingsClick, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
-                            contentDescription = null,
+                            contentDescription = "Settings",
                             tint = iconTint,
                             modifier = iconSize
                         )

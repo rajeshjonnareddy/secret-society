@@ -8,7 +8,10 @@ sealed interface VaultUiState {
     data class Unlocked(
         val vaultName: String,
         val entries: List<PasswordEntry>,
-        val isLoading: Boolean = false
+        val isLoading: Boolean = false,
+        val username: String = "",
+        val email: String = "",
+        val encryptionType: String = "AES-256-GCM"
     ) : VaultUiState
     data object PickFile : VaultUiState
     data class Error(val message: String, val previous: VaultUiState?) : VaultUiState

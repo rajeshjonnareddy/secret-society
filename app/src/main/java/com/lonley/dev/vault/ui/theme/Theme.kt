@@ -86,6 +86,8 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = Color(0xFF49454F),
 )
 
+enum class ThemeMode { System, Light, Dark }
+
 data class GlassColors(
     val background: Color,
     val border: Color
@@ -100,7 +102,12 @@ val LocalGlassColors = staticCompositionLocalOf {
 
 @Composable
 fun VaultTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.System,
+    darkTheme: Boolean = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    },
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

@@ -93,6 +93,16 @@ class VaultRepository(private val filesDir: File) {
         dest
     }
 
+    suspend fun deleteAllVaultFiles() = withContext(Dispatchers.IO) {
+        val vaultFiles = filesDir.listFiles { file ->
+            file.name.endsWith(".vlt", ignoreCase = true)
+        }
+        vaultFiles?.forEach { file ->
+            val deleted = file.delete()
+            VaultLogger.i("Repository", "Deleted vault file: ${file.name} (success=$deleted)")
+        }
+    }
+
     fun parseEntries(metadata: JSONObject): List<PasswordEntry> {
         val passwordsArray = metadata.optJSONArray("passwords") ?: return emptyList()
         return (0 until passwordsArray.length()).map { i ->
