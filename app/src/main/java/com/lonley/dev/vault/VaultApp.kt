@@ -1,6 +1,5 @@
 package com.lonley.dev.vault
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -42,161 +42,94 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.lonley.dev.vault.crypto.VaultCrypto
-import com.lonley.dev.vault.util.VaultLogger
+import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
 import com.lonley.dev.vault.views.HomeScreen
-import com.lonley.dev.vault.views.PasswordEntry
 import com.lonley.dev.vault.views.VaultScreen
-import org.json.JSONObject
-import java.io.File
-import java.util.UUID
-
-object Routes {
-    const val HOME = "home"
-    const val SIGN_UP = "sign_up"
-    const val UPLOAD_VAULT = "upload_vault"
-    const val USER_VAULT = "user_vault"
-}
-
-sealed class InitializationState {
-    data object Loading : InitializationState()
-    data class DecisionMade(val destination: String) : InitializationState()
-}
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VaultApp() {
-    val navController = rememberNavController()
     val context = LocalContext.current
-    val viewModel: VaultViewModel = viewModel()
+    val viewModel: VaultViewModel = viewModel(
+        factory = VaultViewModel.Factory(context.filesDir)
+    )
 
-    var initializationState by remember { mutableStateOf<InitializationState>(InitializationState.Loading) }
-    var foundVaultFileName by remember { mutableStateOf("") }
-// State for the password dialog
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    var masterPasswordInput by remember { mutableStateOf("") }
-    var authenticationResult by remember { mutableStateOf<Boolean?>(null) } // To track successful/failed auth
+    val uiState by viewModel.uiState.collectAsState()
 
-    // Coroutine scope for performing asynchronous checks and actions
-    val coroutineScope = rememberCoroutineScope()
-
-    // Effect to run the check when the composable first enters the composition
     LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            val filesDir = context.filesDir
-            val vaultFiles = filesDir.listFiles { file ->
-                file.name.endsWith(".vlt", ignoreCase = true) || file.name.endsWith(".vault", ignoreCase = true)
-            }
-            val existingVaultFileFound = vaultFiles?.isNotEmpty() == true
-
-            if (existingVaultFileFound) {
-                Log.d("AppNavigation", "Existing vault found. Preparing to ask for password.")
-                // Instead of directly deciding the destination, we trigger the dialog
-                foundVaultFileName = vaultFiles.first().name
-                showPasswordDialog = true
-                // IMPORTANT: We don't set initializationState yet. We wait for user input.
-            } else {
-                Log.d("AppNavigation", "No existing vault found. Navigating to HOME.")
-                initializationState = InitializationState.DecisionMade(Routes.HOME)
-            }
-        }
+        viewModel.initialize()
     }
 
-    // --- Password Dialog ---
-    if (showPasswordDialog) {
-        ExpressivePasswordDialog(
-            foundVaultFileName = foundVaultFileName,
-            onDismiss = {
-                showPasswordDialog = false
-                // Handle cancellation logic (e.g., navigate home)
-                initializationState = InitializationState.DecisionMade(Routes.HOME)
-            },
-            onConfirm = { password ->
-                // Handle the password input
-                if (password.isNotEmpty()) {
-                    showPasswordDialog = false
-                    // Proceed to unlock logic
-                    initializationState = InitializationState.DecisionMade(Routes.USER_VAULT)
-                }
-            }
-        )
-    }
-
-    // Display a loading indicator or placeholder while the start destination is being determined
-    when (val state = initializationState) {
-        InitializationState.Loading -> {
-            // Show a loading screen while we determine the start destination
+    when (val state = uiState) {
+        is VaultUiState.Initializing -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                LinearProgressIndicator(
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
             }
         }
-        is InitializationState.DecisionMade -> {
 
-    NavHost(navController = navController, startDestination = state.destination) {
-        composable(Routes.HOME) {
+        is VaultUiState.Locked -> {
             HomeScreen(
                 createNewVault = { vaultName, username, email, masterPassword, encryptionType ->
-                    VaultLogger.i("Navigation", "Creating new vault: name=$vaultName, user=$username, encryption=$encryptionType")
-
-                    val json = JSONObject().apply {
-                        put("vaultName", vaultName)
-                        put("username", username)
-                        put("email", email)
-                        put("encryptionType", encryptionType)
-                    }
-                    val usersVaultFile = File(context.filesDir, ".$username.vlt")
-
-                    try {
-                        val encryptedBytes = VaultCrypto.encrypt(
-                            plaintextBytes = json.toString().toByteArray(Charsets.UTF_8),
-                            password = masterPassword,
-                            algorithm = encryptionType
-                        )
-                        usersVaultFile.outputStream().use { it.write(encryptedBytes) }
-                        VaultLogger.i("Navigation", "Vault file written: ${usersVaultFile.absolutePath} (${encryptedBytes.size} bytes)")
-
-                        viewModel.initNewVault(usersVaultFile, masterPassword, json)
-                        navController.navigate(Routes.USER_VAULT) {
-                            popUpTo(Routes.HOME) { inclusive = true }
-                        }
-                        VaultLogger.d("Navigation", "Navigated to USER_VAULT")
-                    } catch (e: IllegalArgumentException) {
-                        VaultLogger.e("Navigation", "Vault creation failed (algorithm guard)", e)
-                    } catch (e: Exception) {
-                        VaultLogger.e("Navigation", "Vault creation failed", e)
-                    }
+                    viewModel.createVault(
+                        vaultName = vaultName,
+                        username = username,
+                        email = email,
+                        password = masterPassword.toCharArray(),
+                        encryptionType = encryptionType
+                    )
                 },
                 onUploadClick = { /* TODO */ }
             )
         }
-        composable(Routes.USER_VAULT) {
-            val vaultName by viewModel.vaultName.collectAsState()
-            val entries by viewModel.passwordEntries.collectAsState()
+
+        is VaultUiState.PromptUnlock -> {
+            ExpressivePasswordDialog(
+                foundVaultFileName = state.fileName,
+                onDismiss = { /* TODO: quit gracefully */ },
+                onConfirm = { password ->
+                    viewModel.unlockVault(password.toCharArray())
+                }
+            )
+        }
+
+        is VaultUiState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        is VaultUiState.Unlocked -> {
             var showAddSheet by remember { mutableStateOf(false) }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             val scope = rememberCoroutineScope()
 
             VaultScreen(
-                vaultName = vaultName,
-                passwordEntries = entries,
+                vaultName = state.vaultName,
+                passwordEntries = state.entries,
                 onAddPasswordClick = { showAddSheet = true },
-                onBackClick = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.USER_VAULT) { inclusive = true }
-                    }
-                }
+                onBackClick = { viewModel.lockVault() }
             )
 
             if (showAddSheet) {
@@ -207,13 +140,10 @@ fun VaultApp() {
                     AddPasswordContent(
                         onConfirm = { name, username, password, website ->
                             viewModel.addPassword(
-                                PasswordEntry(
-                                    id = UUID.randomUUID().toString(),
-                                    name = name,
-                                    username = username,
-                                    password = password,
-                                    website = website.ifBlank { null }
-                                )
+                                name = name,
+                                username = username,
+                                password = password,
+                                website = website.ifBlank { null }
                             )
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false
@@ -228,29 +158,32 @@ fun VaultApp() {
                 }
             }
         }
-    }}}
-}
 
-@Preview(showBackground = true)
-@Composable
-fun VaultAppPreview() {
-    VaultApp()
+        is VaultUiState.Error -> {
+            ExpressivePasswordDialog(
+                foundVaultFileName = (state.previous as? VaultUiState.PromptUnlock)?.fileName ?: "",
+                onDismiss = { viewModel.dismissError() },
+                onConfirm = { password ->
+                    viewModel.unlockVault(password.toCharArray())
+                },
+                errorMessage = state.message
+            )
+        }
+    }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpressivePasswordDialog(
     foundVaultFileName: String,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
+    errorMessage: String? = null
 ) {
     var masterPasswordInput by remember { mutableStateOf("") }
 
-    // 1. BasicAlertDialog for full control over expressive motion/layout
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
-            // 2. Use Material 3 Expressive shapes (ExtraLarge or custom morphs)
             shape = MaterialTheme.shapes.extraLarge,
             tonalElevation = 6.dp,
             modifier = Modifier.widthIn(max = 320.dp)
@@ -259,19 +192,29 @@ fun ExpressivePasswordDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 3. Emphasized Typography for the title
                 Text(
                     text = "Unlock Vault",
-                    style = MaterialTheme.typography.headlineMedium, // Emphasized role
+                    style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                Text(
-                    text = foundVaultFileName.substring(1),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
+                if (foundVaultFileName.isNotEmpty()) {
+                    Text(
+                        text = if (foundVaultFileName.startsWith(".")) foundVaultFileName.substring(1) else foundVaultFileName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = if (errorMessage != null) 8.dp else 24.dp)
+                    )
+                }
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
 
                 OutlinedTextField(
                     value = masterPasswordInput,
@@ -281,12 +224,12 @@ fun ExpressivePasswordDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium // Consistent expressive rounding
+                    shape = MaterialTheme.shapes.medium,
+                    isError = errorMessage != null
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 4. ButtonGroup for expressive action layout
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -298,7 +241,6 @@ fun ExpressivePasswordDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = { onConfirm(masterPasswordInput) },
-                        // Expressive buttons often use high-tonal contrast
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
                         Icon(Icons.Default.LockOpen, contentDescription = null)

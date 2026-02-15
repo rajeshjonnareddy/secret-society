@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(keybindings-help)",
+      "Bash(./gradlew.bat assembleDebug:*)"
+    ]
+  }
+}

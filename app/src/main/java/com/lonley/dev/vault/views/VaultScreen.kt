@@ -49,17 +49,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.ui.theme.VaultTheme
-
-data class PasswordEntry(
-    val id: String,
-    val name: String,
-    val username: String,
-    val password: String,
-    val website: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
-)
 
 // ── Reusable glass card ──
 

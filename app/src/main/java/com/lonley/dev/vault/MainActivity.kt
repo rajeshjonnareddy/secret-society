@@ -16,7 +16,7 @@ import com.lonley.dev.vault.util.VaultLogger
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        VaultLogger.init(applicationContext)
+//        VaultLogger.init(applicationContext)
         VaultLogger.i("App", "MainActivity created")
         enableEdgeToEdge()
         setContent {
