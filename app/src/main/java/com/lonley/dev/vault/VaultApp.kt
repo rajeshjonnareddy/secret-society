@@ -46,10 +46,14 @@ import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
 import com.lonley.dev.vault.views.HomeScreen
+import com.lonley.dev.vault.views.PasswordDetailDialog
 import com.lonley.dev.vault.views.SettingsScreen
 import com.lonley.dev.vault.views.VaultScreen
 import kotlinx.coroutines.launch
@@ -176,8 +180,16 @@ fun VaultApp(viewModel: VaultViewModel) {
         is VaultUiState.Unlocked -> {
             var showAddSheet by remember { mutableStateOf(false) }
             var showSettings by remember { mutableStateOf(false) }
+            var selectedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
+            var editMode by remember { mutableStateOf(false) }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             val scope = rememberCoroutineScope()
+            val clipboardManager = LocalClipboardManager.current
+
+            val copyToClipboard: (String) -> Unit = { text ->
+                clipboardManager.setText(AnnotatedString(text))
+                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
 
             val launchDownload = {
                 downloadLauncher.launch(viewModel.getVaultFileName())
@@ -202,7 +214,35 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onAddPasswordClick = { showAddSheet = true },
                     onBackClick = { viewModel.lockVault() },
                     onDownloadClick = launchDownload,
-                    onSettingsClick = { showSettings = true }
+                    onSettingsClick = { showSettings = true },
+                    onEntryClick = { entry ->
+                        selectedEntry = entry
+                        editMode = false
+                    },
+                    onCopyPassword = { entry ->
+                        copyToClipboard(entry.password)
+                    },
+                    onEditEntry = { entry ->
+                        selectedEntry = entry
+                        editMode = true
+                    }
+                )
+            }
+
+            if (selectedEntry != null) {
+                PasswordDetailDialog(
+                    entry = selectedEntry!!,
+                    startInEditMode = editMode,
+                    onDismiss = { selectedEntry = null },
+                    onSave = { id, name, username, password, website ->
+                        viewModel.updatePassword(id, name, username, password, website)
+                        selectedEntry = null
+                    },
+                    onDelete = { id ->
+                        viewModel.deletePassword(id)
+                        selectedEntry = null
+                    },
+                    onCopyToClipboard = copyToClipboard
                 )
             }
 

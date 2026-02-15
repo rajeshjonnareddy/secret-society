@@ -194,6 +194,34 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
         saveVaultAsync()
     }
 
+    fun updatePassword(id: String, name: String, username: String, password: String, website: String?) {
+        val index = entries.indexOfFirst { it.id == id }
+        if (index == -1) return
+        VaultLogger.i("ViewModel", "Updating password entry: name=$name, id=$id")
+        entries[index] = entries[index].copy(
+            name = name,
+            username = username,
+            password = password,
+            website = website
+        )
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked) {
+            _uiState.value = currentState.copy(entries = entries.toList())
+        }
+        saveVaultAsync()
+    }
+
+    fun deletePassword(id: String) {
+        val removed = entries.removeAll { it.id == id }
+        if (!removed) return
+        VaultLogger.i("ViewModel", "Deleted password entry: id=$id")
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked) {
+            _uiState.value = currentState.copy(entries = entries.toList())
+        }
+        saveVaultAsync()
+    }
+
     private fun saveVaultAsync() {
         val file = vaultFile ?: return
         val pw = masterPassword ?: return
@@ -238,14 +266,6 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 } catch (e: Exception) {
                     VaultLogger.e("ViewModel", "Save before lock failed", e)
                 }
-            }
-
-            // Delete local vault files from storage
-            try {
-                repository.deleteAllVaultFiles()
-                VaultLogger.i("ViewModel", "Local vault files deleted")
-            } catch (e: Exception) {
-                VaultLogger.e("ViewModel", "Failed to delete vault files", e)
             }
 
             // Clear in-memory state

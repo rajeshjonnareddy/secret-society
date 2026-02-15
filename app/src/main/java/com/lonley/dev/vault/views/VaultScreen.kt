@@ -2,6 +2,7 @@ package com.lonley.dev.vault.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,6 +26,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.AttachEmail
@@ -233,30 +236,56 @@ fun SearchInputGlassCard(
 // ── Password entry card using glass style ──
 
 @Composable
-private fun PasswordEntryItem(entry: PasswordEntry) {
+private fun PasswordEntryItem(
+    entry: PasswordEntry,
+    onClick: () -> Unit = {},
+    onCopyClick: () -> Unit = {},
+    onEditClick: () -> Unit = {}
+) {
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         contentPadding = PaddingValues(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = entry.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = entry.username,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (!entry.website.isNullOrBlank()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = entry.website,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    text = entry.username,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (!entry.website.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = entry.website,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            IconButton(onClick = onCopyClick) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy password",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onEditClick) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit entry",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -273,7 +302,10 @@ fun VaultScreen(
     onAddPasswordClick: () -> Unit,
     onBackClick: () -> Unit = {},
     onDownloadClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onEntryClick: (PasswordEntry) -> Unit = {},
+    onCopyPassword: (PasswordEntry) -> Unit = {},
+    onEditEntry: (PasswordEntry) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -407,7 +439,12 @@ fun VaultScreen(
                         items = filteredEntries,
                         key = { it.id }
                     ) { entry ->
-                        PasswordEntryItem(entry = entry)
+                        PasswordEntryItem(
+                            entry = entry,
+                            onClick = { onEntryClick(entry) },
+                            onCopyClick = { onCopyPassword(entry) },
+                            onEditClick = { onEditEntry(entry) }
+                        )
                     }
                     item {
                         Spacer(modifier = Modifier.height(80.dp))
