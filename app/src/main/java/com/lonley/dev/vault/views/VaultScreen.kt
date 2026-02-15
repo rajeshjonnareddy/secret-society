@@ -53,8 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
+import com.lonley.dev.vault.ui.theme.LocalGlassColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,23 +71,13 @@ fun GlassCard(
     contentPadding: PaddingValues = PaddingValues(0.dp),
     content: @Composable BoxScope.() -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val glassBg = if (isDark) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-    }
-    val borderColor = if (isDark) {
-        Color.White.copy(alpha = 0.1f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    }
+    val glass = LocalGlassColors.current
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(glassBg)
-            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+            .background(glass.background)
+            .border(1.dp, glass.border, RoundedCornerShape(16.dp))
             .padding(contentPadding),
         content = content
     )
@@ -102,24 +92,14 @@ private fun SearchGlassBar(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val isDark = isSystemInDarkTheme()
-    val glassBg = if (isDark) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-    }
-    val borderColor = if (isDark) {
-        Color.White.copy(alpha = 0.1f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    }
+    val glass = LocalGlassColors.current
 
     Box(
         modifier = modifier
             .height(56.dp)
             .clip(shape)
-            .background(glassBg)
-            .border(1.dp, borderColor, shape)
+            .background(glass.background)
+            .border(1.dp, glass.border, shape)
             .padding(horizontal = 16.dp)
     ) {
         Row(
@@ -131,7 +111,7 @@ private fun SearchGlassBar(
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             OutlinedTextField(
                 value = query,
@@ -170,24 +150,14 @@ fun SearchInputGlassCard(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val roundedShape = RoundedCornerShape(16.dp)
-    val isDark = isSystemInDarkTheme()
-    val glassBg = if (isDark) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-    }
-    val borderColor = if (isDark) {
-        Color.White.copy(alpha = 0.1f)
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    }
+    val glass = LocalGlassColors.current
 
     Box(
         modifier = modifier
             .height(50.dp)
             .clip(roundedShape)
-            .background(glassBg)
-            .border(1.dp, borderColor, roundedShape)
+            .background(glass.background)
+            .border(1.dp, glass.border, roundedShape)
             .padding(horizontal = 16.dp, vertical = 0.dp)
     ) {
         Row(
@@ -452,18 +422,16 @@ fun VaultScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.weight(1f)
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
                     IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
                         Icon(

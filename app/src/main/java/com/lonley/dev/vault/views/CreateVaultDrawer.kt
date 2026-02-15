@@ -46,6 +46,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.os.Build
+import com.lonley.dev.vault.ui.theme.StrengthFair
+import com.lonley.dev.vault.ui.theme.StrengthGood
+import com.lonley.dev.vault.ui.theme.StrengthStrong
+import com.lonley.dev.vault.ui.theme.StrengthWeak
 import com.lonley.dev.vault.ui.theme.VaultTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -362,10 +366,10 @@ private fun calculateStrength(password: String): PasswordStrength {
     if (password.any { !it.isLetterOrDigit() }) score++
 
     return when {
-        score <= 2 -> PasswordStrength(0.25f, "Weak", Color(0xFFE53935))
-        score <= 3 -> PasswordStrength(0.5f, "Fair", Color(0xFFFB8C00))
-        score <= 4 -> PasswordStrength(0.75f, "Good", Color(0xFFFFB300))
-        else -> PasswordStrength(1f, "Strong", Color(0xFF43A047))
+        score <= 2 -> PasswordStrength(0.25f, "Weak", StrengthWeak)
+        score <= 3 -> PasswordStrength(0.5f, "Fair", StrengthFair)
+        score <= 4 -> PasswordStrength(0.75f, "Good", StrengthGood)
+        else -> PasswordStrength(1f, "Strong", StrengthStrong)
     }
 }
 

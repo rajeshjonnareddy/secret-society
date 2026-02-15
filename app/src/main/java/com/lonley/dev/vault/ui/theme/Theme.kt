@@ -19,8 +19,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -84,6 +86,18 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = Color(0xFF49454F),
 )
 
+data class GlassColors(
+    val background: Color,
+    val border: Color
+)
+
+val LocalGlassColors = staticCompositionLocalOf {
+    GlassColors(
+        background = Color.Unspecified,
+        border = Color.Unspecified
+    )
+}
+
 @Composable
 fun VaultTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -108,21 +122,35 @@ fun VaultTheme(
         }
     }
 
+    val glassColors = if (darkTheme) {
+        GlassColors(
+            background = colorScheme.surface.copy(alpha = 0.3f),
+            border = Color.White.copy(alpha = 0.1f)
+        )
+    } else {
+        GlassColors(
+            background = colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            border = colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.background)
-        ) {
-            ThemeAwareAnimatedBackground(
-                primaryColor = colorScheme.primary,
-                secondaryColor = colorScheme.tertiary
-            )
+        CompositionLocalProvider(LocalGlassColors provides glassColors) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colorScheme.background)
+            ) {
+                ThemeAwareAnimatedBackground(
+                    primaryColor = colorScheme.primary,
+                    secondaryColor = colorScheme.tertiary
+                )
 
-            content()
+                content()
+            }
         }
     }
 }
