@@ -25,15 +25,24 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AttachEmail
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Downloading
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.VideocamOff
+import androidx.compose.material.icons.outlined.FrontHand
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -402,21 +411,79 @@ fun VaultScreen(
             }
         }
 
-        // FAB overlay
-        FloatingActionButton(
-            onClick = onAddPasswordClick,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            shape = MaterialTheme.shapes.extraLarge,
+        val iconTint = MaterialTheme.colorScheme.onSurface
+        val iconSize = Modifier.size(24.dp)
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add New Password",
-                modifier = Modifier.size(28.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                ) {
+                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Lock,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = iconSize
+                        )
+                    }
+                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = iconSize
+                        )
+                    }
+                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.AttachEmail,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = iconSize
+                        )
+                    }
+                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = iconSize
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                onClick = onAddPasswordClick
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add New Password",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = iconSize
+                    )
+                }
+            }
         }
     }
 }
