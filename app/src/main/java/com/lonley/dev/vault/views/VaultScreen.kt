@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -256,6 +257,7 @@ private fun PasswordEntryItem(entry: PasswordEntry) {
 fun VaultScreen(
     vaultName: String,
     passwordEntries: List<PasswordEntry>,
+    isLoading: Boolean = false,
     onAddPasswordClick: () -> Unit,
     onBackClick: () -> Unit = {}
 ) {
@@ -336,7 +338,16 @@ fun VaultScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── Content area ──
-            if (passwordEntries.isEmpty()) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (passwordEntries.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .weight(1f)

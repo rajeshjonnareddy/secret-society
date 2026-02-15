@@ -58,7 +58,11 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 else -> null
             } ?: return@launch
 
-            _uiState.value = VaultUiState.Loading("Decrypting vault...")
+            val displayName = fileName
+                .removePrefix(".")
+                .removeSuffix(".vlt")
+                .ifEmpty { "Vault" }
+            _uiState.value = VaultUiState.Unlocked(displayName, emptyList(), isLoading = true)
             try {
                 val file = File(vaultFile?.parent ?: repository.findExistingVault()?.parent ?: return@launch, fileName)
                 val metadata = repository.decryptVault(file, password)
@@ -169,6 +173,17 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
         _uiState.value = VaultUiState.Locked
         _saveState.value = SaveState.Idle
         VaultLogger.i("ViewModel", "Vault locked")
+    }
+
+    fun noVault() {
+        masterPassword?.fill('\u0000')
+        masterPassword = null
+        vaultFile = null
+        vaultMetadata = null
+        entries.clear()
+        _uiState.value = VaultUiState.Locked
+        _saveState.value = SaveState.Idle
+        VaultLogger.i("ViewModel", "No vault found.")
     }
 
     override fun onCleared() {

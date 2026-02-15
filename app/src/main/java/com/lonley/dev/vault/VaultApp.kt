@@ -96,7 +96,7 @@ fun VaultApp() {
         is VaultUiState.PromptUnlock -> {
             ExpressivePasswordDialog(
                 foundVaultFileName = state.fileName,
-                onDismiss = { /* TODO: quit gracefully */ },
+                onDismiss = { viewModel.noVault() },
                 onConfirm = { password ->
                     viewModel.unlockVault(password.toCharArray())
                 }
@@ -128,6 +128,7 @@ fun VaultApp() {
             VaultScreen(
                 vaultName = state.vaultName,
                 passwordEntries = state.entries,
+                isLoading = state.isLoading,
                 onAddPasswordClick = { showAddSheet = true },
                 onBackClick = { viewModel.lockVault() }
             )
