@@ -47,6 +47,37 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
             }
         }
     }
+    fun openExistingVault() {
+        viewModelScope.launch {
+            try {
+                val existingFile = repository.findExistingVault()
+                if (existingFile != null) {
+                    VaultLogger.i("ViewModel", "Open existing: found ${existingFile.name}")
+                    _uiState.value = VaultUiState.PromptUnlock(existingFile.name)
+                } else {
+                    VaultLogger.i("ViewModel", "Open existing: no local vault, launching picker")
+                    _uiState.value = VaultUiState.PickFile
+                }
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "openExistingVault failed", e)
+                _uiState.value = VaultUiState.Error("Failed to check for vaults", VaultUiState.Locked)
+            }
+        }
+    }
+
+    fun importVault(bytes: ByteArray, fileName: String) {
+        viewModelScope.launch {
+            try {
+                val file = repository.importVaultFile(bytes, fileName)
+                VaultLogger.i("ViewModel", "Imported vault: ${file.name}")
+                _uiState.value = VaultUiState.PromptUnlock(file.name)
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "Import failed", e)
+                _uiState.value = VaultUiState.Error("Failed to import vault: ${e.message}", VaultUiState.Locked)
+            }
+        }
+    }
+
     fun unlockVault(password: CharArray) {
         viewModelScope.launch {
             val currentState = _uiState.value

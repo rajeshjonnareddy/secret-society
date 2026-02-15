@@ -84,6 +84,15 @@ class VaultRepository(private val filesDir: File) {
         VaultLogger.i("Repository", "Vault saved: ${entries.size} entries, ${encrypted.size} bytes")
     }
 
+    suspend fun importVaultFile(bytes: ByteArray, fileName: String): File = withContext(Dispatchers.IO) {
+        val safeName = fileName.ifBlank { "imported.vlt" }
+            .let { if (it.endsWith(".vlt", ignoreCase = true)) it else "$it.vlt" }
+        val dest = File(filesDir, safeName)
+        dest.outputStream().use { it.write(bytes) }
+        VaultLogger.i("Repository", "Imported vault file: ${dest.name} (${bytes.size} bytes)")
+        dest
+    }
+
     fun parseEntries(metadata: JSONObject): List<PasswordEntry> {
         val passwordsArray = metadata.optJSONArray("passwords") ?: return emptyList()
         return (0 until passwordsArray.length()).map { i ->

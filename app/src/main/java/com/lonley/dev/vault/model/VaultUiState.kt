@@ -10,6 +10,7 @@ sealed interface VaultUiState {
         val entries: List<PasswordEntry>,
         val isLoading: Boolean = false
     ) : VaultUiState
+    data object PickFile : VaultUiState
     data class Error(val message: String, val previous: VaultUiState?) : VaultUiState
 }
 

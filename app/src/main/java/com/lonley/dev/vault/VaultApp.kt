@@ -43,6 +43,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.viewmodel.VaultViewModel
@@ -60,6 +62,22 @@ fun VaultApp() {
     )
 
     val uiState by viewModel.uiState.collectAsState()
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            val displayName = uri.lastPathSegment?.substringAfterLast('/') ?: "imported.vlt"
+            if (bytes != null) {
+                viewModel.importVault(bytes, displayName)
+            } else {
+                viewModel.noVault()
+            }
+        } else {
+            viewModel.noVault()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.initialize()
@@ -89,8 +107,26 @@ fun VaultApp() {
                         encryptionType = encryptionType
                     )
                 },
-                onUploadClick = { /* TODO */ }
+                onUploadClick = { viewModel.openExistingVault() }
             )
+        }
+
+        is VaultUiState.PickFile -> {
+            HomeScreen(
+                createNewVault = { vaultName, username, email, masterPassword, encryptionType ->
+                    viewModel.createVault(
+                        vaultName = vaultName,
+                        username = username,
+                        email = email,
+                        password = masterPassword.toCharArray(),
+                        encryptionType = encryptionType
+                    )
+                },
+                onUploadClick = { viewModel.openExistingVault() }
+            )
+            LaunchedEffect(Unit) {
+                filePickerLauncher.launch(arrayOf("*/*"))
+            }
         }
 
         is VaultUiState.PromptUnlock -> {
