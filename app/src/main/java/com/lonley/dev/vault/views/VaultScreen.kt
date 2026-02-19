@@ -273,6 +273,15 @@ private fun PasswordEntryItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
+                if (!entry.comments.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = entry.comments,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1
+                    )
+                }
             }
             IconButton(onClick = onCopyClick) {
                 Icon(
@@ -331,7 +340,7 @@ fun VaultScreen(
         ) {
             // Brand-style vault name
             Text(
-                text = vaultName,
+                text = vaultName.replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

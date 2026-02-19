@@ -112,7 +112,9 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 .ifEmpty { "Vault" }
             _uiState.value = VaultUiState.Unlocked(displayName, emptyList(), isLoading = true)
             try {
-                val file = File(vaultFile?.parent ?: repository.findExistingVault()?.parent ?: return@launch, fileName)
+                val file = vaultFile
+                    ?: repository.findVaultByName(fileName)
+                    ?: return@launch
                 val metadata = repository.decryptVault(file, password)
 
                 vaultFile = file
@@ -175,13 +177,14 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
         }
     }
 
-    fun addPassword(name: String, username: String, password: String, website: String?) {
+    fun addPassword(name: String, username: String, password: String, website: String?, comments: String? = null) {
         val entry = PasswordEntry(
             id = UUID.randomUUID().toString(),
             name = name,
             username = username,
             password = password,
-            website = website
+            website = website,
+            comments = comments
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
@@ -194,7 +197,7 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
         saveVaultAsync()
     }
 
-    fun updatePassword(id: String, name: String, username: String, password: String, website: String?) {
+    fun updatePassword(id: String, name: String, username: String, password: String, website: String?, comments: String? = null) {
         val index = entries.indexOfFirst { it.id == id }
         if (index == -1) return
         VaultLogger.i("ViewModel", "Updating password entry: name=$name, id=$id")
@@ -202,7 +205,8 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
             name = name,
             username = username,
             password = password,
-            website = website
+            website = website,
+            comments = comments
         )
         val currentState = _uiState.value
         if (currentState is VaultUiState.Unlocked) {

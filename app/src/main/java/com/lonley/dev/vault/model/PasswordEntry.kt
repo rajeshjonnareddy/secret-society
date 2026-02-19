@@ -6,5 +6,6 @@ data class PasswordEntry(
     val username: String,
     val password: String,
     val website: String? = null,
+    val comments: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

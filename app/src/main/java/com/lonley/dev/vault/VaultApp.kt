@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -93,7 +94,11 @@ fun VaultApp(viewModel: VaultViewModel) {
     ) { uri ->
         if (uri != null) {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            val displayName = uri.lastPathSegment?.substringAfterLast('/') ?: "imported.vlt"
+            // Query the proper display name from the content resolver
+            val displayName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex >= 0) cursor.getString(nameIndex) else null
+            } ?: uri.lastPathSegment?.substringAfterLast('/') ?: "imported.vlt"
             if (bytes != null) {
                 viewModel.importVault(bytes, displayName)
             } else {
@@ -238,8 +243,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                     entry = selectedEntry!!,
                     startInEditMode = editMode,
                     onDismiss = { selectedEntry = null },
-                    onSave = { id, name, username, password, website ->
-                        viewModel.updatePassword(id, name, username, password, website)
+                    onSave = { id, name, username, password, website, comments ->
+                        viewModel.updatePassword(id, name, username, password, website, comments)
                         selectedEntry = null
                     },
                     onDelete = { id ->
@@ -256,12 +261,13 @@ fun VaultApp(viewModel: VaultViewModel) {
                     sheetState = addSheetState
                 ) {
                     AddPasswordContent(
-                        onConfirm = { name, username, password, website ->
+                        onConfirm = { name, username, password, website, comments ->
                             viewModel.addPassword(
                                 name = name,
                                 username = username,
                                 password = password,
-                                website = website.ifBlank { null }
+                                website = website.ifBlank { null },
+                                comments = comments.ifBlank { null }
                             )
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false

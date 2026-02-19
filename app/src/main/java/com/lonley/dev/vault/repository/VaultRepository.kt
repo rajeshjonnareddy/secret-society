@@ -18,6 +18,11 @@ class VaultRepository(private val filesDir: File) {
         vaultFiles?.firstOrNull()
     }
 
+    suspend fun findVaultByName(fileName: String): File? = withContext(Dispatchers.IO) {
+        val file = File(filesDir, fileName)
+        if (file.exists()) file else findExistingVault()
+    }
+
     suspend fun decryptVault(file: File, password: CharArray): JSONObject = withContext(Dispatchers.IO) {
         val passwordString = String(password)
         try {
@@ -72,6 +77,7 @@ class VaultRepository(private val filesDir: File) {
                 put("username", entry.username)
                 put("password", entry.password)
                 put("website", entry.website ?: JSONObject.NULL)
+                put("comments", entry.comments ?: JSONObject.NULL)
                 put("createdAt", entry.createdAt)
             })
         }
@@ -113,6 +119,7 @@ class VaultRepository(private val filesDir: File) {
                 username = obj.getString("username"),
                 password = obj.getString("password"),
                 website = if (obj.isNull("website")) null else obj.optString("website"),
+                comments = if (obj.isNull("comments")) null else obj.optString("comments"),
                 createdAt = obj.optLong("createdAt", System.currentTimeMillis())
             )
         }

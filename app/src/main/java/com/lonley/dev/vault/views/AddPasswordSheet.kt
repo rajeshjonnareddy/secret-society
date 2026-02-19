@@ -11,6 +11,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -37,13 +42,14 @@ import com.lonley.dev.vault.ui.theme.VaultTheme
 
 @Composable
 fun AddPasswordContent(
-    onConfirm: (name: String, username: String, password: String, website: String) -> Unit,
+    onConfirm: (name: String, username: String, password: String, website: String, comments: String) -> Unit,
     onCancel: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var website by remember { mutableStateOf("") }
+    var comments by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     var nameDirty by remember { mutableStateOf(false) }
@@ -51,7 +57,7 @@ fun AddPasswordContent(
     var passwordDirty by remember { mutableStateOf(false) }
 
     val isFormValid = name.isNotBlank() && username.isNotBlank() && password.isNotBlank()
-    val fieldShape = MaterialTheme.shapes.large
+    val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
         modifier = Modifier
@@ -85,6 +91,12 @@ fun AddPasswordContent(
             supportingText = if (nameDirty && name.isBlank()) {
                 { Text("Name is required") }
             } else null,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Badge,
+                    contentDescription = null
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { if (!it.isFocused) nameDirty = true },
@@ -102,6 +114,12 @@ fun AddPasswordContent(
             supportingText = if (usernameDirty && username.isBlank()) {
                 { Text("Username is required") }
             } else null,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = null
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { if (!it.isFocused) usernameDirty = true },
@@ -121,6 +139,12 @@ fun AddPasswordContent(
             } else null,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null
+                )
+            },
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
@@ -142,6 +166,31 @@ fun AddPasswordContent(
             onValueChange = { website = it },
             label = { Text("Website (Optional)") },
             singleLine = true,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Language,
+                    contentDescription = null
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = fieldShape
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = comments,
+            onValueChange = { comments = it },
+            label = { Text("Comments (Optional)") },
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.Notes,
+                    contentDescription = null
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = fieldShape
         )
@@ -166,7 +215,7 @@ fun AddPasswordContent(
                 )
             }
             Button(
-                onClick = { onConfirm(name, username, password, website) },
+                onClick = { onConfirm(name, username, password, website, comments) },
                 enabled = isFormValid,
                 modifier = Modifier
                     .weight(1f)
@@ -190,7 +239,7 @@ fun AddPasswordContent(
 private fun AddPasswordContentPreview() {
     VaultTheme {
         AddPasswordContent(
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
             onCancel = {}
         )
     }

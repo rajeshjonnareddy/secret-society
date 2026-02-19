@@ -3,7 +3,8 @@
     "allow": [
       "Skill(keybindings-help)",
       "Bash(./gradlew.bat assembleDebug:*)",
-      "Bash(gradlew.bat assembleDebug:*)"
+      "Bash(gradlew.bat assembleDebug:*)",
+      "Bash(./gradlew.bat:*)"
     ]
   }
 }

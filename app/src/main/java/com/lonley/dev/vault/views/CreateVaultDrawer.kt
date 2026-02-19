@@ -87,7 +87,7 @@ fun CreateVaultContent(
     val isFormValid = vaultName.isNotBlank() && username.isNotBlank() &&
             masterPassword.isNotBlank() && confirmPassword.isNotBlank() && passwordsMatch
 
-    val fieldShape = MaterialTheme.shapes.large
+    val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
         modifier = Modifier
