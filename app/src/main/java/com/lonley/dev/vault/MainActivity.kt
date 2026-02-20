@@ -1,5 +1,6 @@
 package com.lonley.dev.vault
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,8 +25,9 @@ class MainActivity : ComponentActivity() {
         VaultLogger.i("App", "MainActivity created")
         enableEdgeToEdge()
         setContent {
+            val prefs = getSharedPreferences("vault_security", Context.MODE_PRIVATE)
             val viewModel: VaultViewModel = viewModel(
-                factory = VaultViewModel.Factory(filesDir)
+                factory = VaultViewModel.Factory(filesDir, prefs)
             )
             val themeMode by viewModel.themeMode.collectAsState()
 

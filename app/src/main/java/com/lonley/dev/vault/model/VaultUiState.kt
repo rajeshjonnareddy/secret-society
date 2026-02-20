@@ -14,7 +14,7 @@ sealed interface VaultUiState {
         val encryptionType: String = "AES-256-GCM"
     ) : VaultUiState
     data object PickFile : VaultUiState
-    data class Error(val message: String, val previous: VaultUiState?) : VaultUiState
+    data class Error(val message: String, val previous: VaultUiState?, val attemptsRemaining: Int = -1) : VaultUiState
 }
 
 sealed interface SaveState {

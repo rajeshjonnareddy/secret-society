@@ -1,6 +1,8 @@
 package com.lonley.dev.vault.views
 
+import android.graphics.drawable.ColorDrawable
 import android.view.WindowManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +20,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +53,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.focus.onFocusChanged
@@ -61,12 +67,67 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.ui.theme.VaultTheme
+
+private fun formatTimestamp(epochMs: Long): String {
+    val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+    return sdf.format(java.util.Date(epochMs))
+}
+
+@Composable
+private fun DetailFieldRow(
+    icon: ImageVector,
+    iconTint: Color,
+    label: String,
+    value: String,
+    trailingContent: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        trailingContent?.invoke()
+    }
+}
 
 @Composable
 fun PasswordDetailDialog(
     entry: PasswordEntry,
     startInEditMode: Boolean = false,
+    themeMode: ThemeMode = ThemeMode.System,
     onDismiss: () -> Unit,
     onSave: (id: String, name: String, username: String, password: String, website: String?, comments: String?) -> Unit,
     onDelete: (id: String) -> Unit,
@@ -108,7 +169,7 @@ fun PasswordDetailDialog(
             decorFitsSystemWindows = false
         )
     ) {
-        // Enable edge-to-edge on the dialog window
+        // Enable edge-to-edge on the dialog window and make background transparent
         val dialogView = LocalView.current
         SideEffect {
             val dialogWindow = dialogView.parent as? android.view.View
@@ -119,11 +180,13 @@ fun PasswordDetailDialog(
                         WindowManager.LayoutParams.MATCH_PARENT,
                         WindowManager.LayoutParams.MATCH_PARENT
                     )
+                    window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+                    window.setDimAmount(0f)
                 }
             }
         }
 
-        VaultTheme {
+        VaultTheme(themeMode = themeMode) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -151,7 +214,7 @@ fun PasswordDetailDialog(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f)
                         )
-                        IconButton(
+                        TextButton(
                             onClick = {
                                 if (isEditing) {
                                     resetFields()
@@ -161,12 +224,7 @@ fun PasswordDetailDialog(
                                 }
                             }
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Text("Cancel")
                         }
                     }
 
@@ -175,6 +233,14 @@ fun PasswordDetailDialog(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    if (!isEditing) {
+                        Text(
+                            text = "Added ${formatTimestamp(entry.createdAt)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -293,167 +359,106 @@ fun PasswordDetailDialog(
                             shape = fieldShape
                         )
                     } else {
-                        // ── View mode: GlassCards ──
+                        // ── View mode: consolidated GlassCard ──
+                        val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-                        // Name card
-                        GlassCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(16.dp)
-                        ) {
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Name",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                // Name row
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Badge,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    label = "Name",
+                                    value = entry.name
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = entry.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface
+
+                                // Divider
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
                                 )
-                            }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Username card
-                        GlassCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Username",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = entry.username,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                IconButton(onClick = { onCopyToClipboard(entry.username) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy username",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Password card
-                        GlassCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Password",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                    Icon(
-                                        imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                IconButton(onClick = { onCopyToClipboard(entry.password) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy password",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Website card (only if present)
-                        if (!entry.website.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            GlassCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(16.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Website",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = entry.website,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                // Username row
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Person,
+                                    iconTint = MaterialTheme.colorScheme.secondary,
+                                    label = "Username",
+                                    value = entry.username,
+                                    trailingContent = {
+                                        IconButton(onClick = { onCopyToClipboard(entry.username) }) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "Copy username",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
-                                    IconButton(onClick = { onCopyToClipboard(entry.website) }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ContentCopy,
-                                            contentDescription = "Copy website",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                )
+
+                                // Divider
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+
+                                // Password row
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Lock,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Password",
+                                    value = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
+                                    trailingContent = {
+                                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                            Icon(
+                                                imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        IconButton(onClick = { onCopyToClipboard(entry.password) }) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "Copy password",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
-                                }
-                            }
-                        }
+                                )
 
-                        // Comments card (only if present)
-                        if (!entry.comments.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            GlassCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(16.dp)
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text = "Comments",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                // Website row (conditional)
+                                if (!entry.website.isNullOrBlank()) {
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = entry.comments,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
+
+                                    DetailFieldRow(
+                                        icon = Icons.Outlined.Language,
+                                        iconTint = MaterialTheme.colorScheme.primary,
+                                        label = "Website",
+                                        value = entry.website
+                                    )
+                                }
+
+                                // Comments row (conditional)
+                                if (!entry.comments.isNullOrBlank()) {
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+
+                                    DetailFieldRow(
+                                        icon = Icons.AutoMirrored.Outlined.Notes,
+                                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        label = "Comments",
+                                        value = entry.comments
                                     )
                                 }
                             }
@@ -539,8 +544,8 @@ fun PasswordDetailDialog(
                                 .height(56.dp),
                             shape = MaterialTheme.shapes.extraLarge,
                             colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
                             Icon(

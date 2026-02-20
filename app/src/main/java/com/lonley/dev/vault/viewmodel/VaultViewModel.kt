@@ -14,10 +14,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import android.content.SharedPreferences
 import java.io.File
 import java.util.UUID
 
-class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
+class VaultViewModel(
+    private val repository: VaultRepository,
+    private val prefs: SharedPreferences
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<VaultUiState>(VaultUiState.Initializing)
     val uiState: StateFlow<VaultUiState> = _uiState.asStateFlow()
@@ -46,6 +50,24 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
     private var encryptionType: String = "AES-256-GCM"
     private var vaultMetadata: JSONObject? = null
     private val entries = mutableListOf<PasswordEntry>()
+
+    companion object {
+        private const val MAX_ATTEMPTS = 5
+        private const val PREF_KEY_PREFIX = "failed_attempts_"
+    }
+
+    private fun attemptsKey(fileName: String): String = "$PREF_KEY_PREFIX$fileName"
+
+    private fun getFailedAttempts(fileName: String): Int =
+        prefs.getInt(attemptsKey(fileName), 0)
+
+    private fun setFailedAttempts(fileName: String, count: Int) {
+        prefs.edit().putInt(attemptsKey(fileName), count).apply()
+    }
+
+    private fun clearFailedAttempts(fileName: String) {
+        prefs.edit().remove(attemptsKey(fileName)).apply()
+    }
 
     fun initialize() {
         viewModelScope.launch {
@@ -126,6 +148,7 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
 
                 val vaultName = metadata.optString("vaultName", "Vault")
                 VaultLogger.i("ViewModel", "Vault unlocked: $vaultName, ${entries.size} entries")
+                clearFailedAttempts(fileName)
                 _uiState.value = VaultUiState.Unlocked(
                     vaultName = vaultName,
                     entries = entries.toList(),
@@ -135,10 +158,26 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
                 )
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Unlock failed", e)
-                _uiState.value = VaultUiState.Error(
-                    "Wrong password or corrupt vault",
-                    VaultUiState.PromptUnlock(fileName)
-                )
+                val attempts = getFailedAttempts(fileName) + 1
+                setFailedAttempts(fileName, attempts)
+                val remaining = MAX_ATTEMPTS - attempts
+
+                if (remaining <= 0) {
+                    VaultLogger.w("ViewModel", "Max attempts reached — deleting vault: $fileName")
+                    repository.deleteAllVaultFiles()
+                    clearFailedAttempts(fileName)
+                    vaultFile = null
+                    _uiState.value = VaultUiState.Error(
+                        "All 5 attempts used. Vault has been permanently deleted.",
+                        VaultUiState.Locked
+                    )
+                } else {
+                    _uiState.value = VaultUiState.Error(
+                        "Wrong password. $remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted.",
+                        VaultUiState.PromptUnlock(fileName),
+                        attemptsRemaining = remaining
+                    )
+                }
             }
         }
     }
@@ -301,10 +340,13 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
         masterPassword = null
     }
 
-    class Factory(private val filesDir: File) : ViewModelProvider.Factory {
+    class Factory(
+        private val filesDir: File,
+        private val prefs: SharedPreferences
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return VaultViewModel(VaultRepository(filesDir)) as T
+            return VaultViewModel(VaultRepository(filesDir), prefs) as T
         }
     }
 }

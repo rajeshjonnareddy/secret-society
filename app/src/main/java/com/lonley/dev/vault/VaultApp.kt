@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -242,10 +243,18 @@ fun VaultApp(viewModel: VaultViewModel) {
                 PasswordDetailDialog(
                     entry = selectedEntry!!,
                     startInEditMode = editMode,
+                    themeMode = themeMode,
                     onDismiss = { selectedEntry = null },
                     onSave = { id, name, username, password, website, comments ->
                         viewModel.updatePassword(id, name, username, password, website, comments)
-                        selectedEntry = null
+                        selectedEntry = selectedEntry?.copy(
+                            name = name,
+                            username = username,
+                            password = password,
+                            website = website,
+                            comments = comments
+                        )
+                        editMode = false
                     },
                     onDelete = { id ->
                         viewModel.deletePassword(id)
@@ -284,14 +293,28 @@ fun VaultApp(viewModel: VaultViewModel) {
         }
 
         is VaultUiState.Error -> {
-            ExpressivePasswordDialog(
-                foundVaultFileName = (state.previous as? VaultUiState.PromptUnlock)?.fileName ?: "",
-                onDismiss = { viewModel.dismissError() },
-                onConfirm = { password ->
-                    viewModel.unlockVault(password.toCharArray())
-                },
-                errorMessage = state.message
-            )
+            val isVaultDeleted = state.previous is VaultUiState.Locked
+            if (isVaultDeleted) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissError() },
+                    title = { Text("Vault Deleted") },
+                    text = { Text(state.message) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.dismissError() }) {
+                            Text("OK")
+                        }
+                    }
+                )
+            } else {
+                ExpressivePasswordDialog(
+                    foundVaultFileName = (state.previous as? VaultUiState.PromptUnlock)?.fileName ?: "",
+                    onDismiss = { viewModel.dismissError() },
+                    onConfirm = { password ->
+                        viewModel.unlockVault(password.toCharArray())
+                    },
+                    errorMessage = state.message
+                )
+            }
         }
     }
 }
