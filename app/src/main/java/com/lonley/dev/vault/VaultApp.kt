@@ -197,15 +197,18 @@ fun VaultApp(viewModel: VaultViewModel) {
             val clipboardManager = LocalClipboardManager.current
 
             val copyToClipboard: (String) -> Unit = { text ->
+                viewModel.resetAutoLockTimer()
                 clipboardManager.setText(AnnotatedString(text))
                 Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
             }
 
             val launchDownload = {
+                viewModel.resetAutoLockTimer()
                 downloadLauncher.launch(viewModel.getVaultFileName())
             }
 
             if (showSettings) {
+                viewModel.resetAutoLockTimer()
                 SettingsScreen(
                     username = state.username,
                     email = state.email,
@@ -221,11 +224,15 @@ fun VaultApp(viewModel: VaultViewModel) {
                     vaultName = state.vaultName,
                     passwordEntries = state.entries,
                     isLoading = state.isLoading,
-                    onAddPasswordClick = { showAddSheet = true },
+                    onAddPasswordClick = {
+                    viewModel.resetAutoLockTimer()
+                    showAddSheet = true
+                },
                     onBackClick = { viewModel.lockVault() },
                     onDownloadClick = launchDownload,
                     onSettingsClick = { showSettings = true },
                     onEntryClick = { entry ->
+                        viewModel.resetAutoLockTimer()
                         selectedEntry = entry
                         editMode = false
                     },
@@ -233,6 +240,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                         copyToClipboard(entry.password)
                     },
                     onEditEntry = { entry ->
+                        viewModel.resetAutoLockTimer()
                         selectedEntry = entry
                         editMode = true
                     }
@@ -246,6 +254,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                     themeMode = themeMode,
                     onDismiss = { selectedEntry = null },
                     onSave = { id, name, username, password, website, comments ->
+                        viewModel.resetAutoLockTimer()
                         viewModel.updatePassword(id, name, username, password, website, comments)
                         selectedEntry = selectedEntry?.copy(
                             name = name,
@@ -271,6 +280,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                 ) {
                     AddPasswordContent(
                         onConfirm = { name, username, password, website, comments ->
+                            viewModel.resetAutoLockTimer()
                             viewModel.addPassword(
                                 name = name,
                                 username = username,

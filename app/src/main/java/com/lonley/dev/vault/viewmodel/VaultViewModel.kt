@@ -1,5 +1,7 @@
 package com.lonley.dev.vault.viewmodel
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,6 +11,8 @@ import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.repository.VaultRepository
 import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.VaultLogger
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +25,42 @@ import java.util.UUID
 class VaultViewModel(
     private val repository: VaultRepository,
     private val prefs: SharedPreferences
-) : ViewModel() {
+) : ViewModel(), DefaultLifecycleObserver {
+
+    private var wasBackgrounded = false
+    private var autoLockJob: Job? = null
+
+    override fun onStop(owner: LifecycleOwner) {
+        if (_uiState.value is VaultUiState.Unlocked) {
+            wasBackgrounded = true
+            VaultLogger.i("ViewModel", "App backgrounded while vault unlocked")
+        }
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        if (wasBackgrounded && _uiState.value is VaultUiState.Unlocked) {
+            VaultLogger.i("ViewModel", "App foregrounded — auto-locking vault")
+            lockVault()
+        }
+        wasBackgrounded = false
+    }
+
+    private fun startAutoLockTimer() {
+        autoLockJob?.cancel()
+        autoLockJob = viewModelScope.launch {
+            delay(60_000L)
+            if (_uiState.value is VaultUiState.Unlocked) {
+                VaultLogger.i("ViewModel", "Inactivity timeout — auto-locking vault")
+                lockVault()
+            }
+        }
+    }
+
+    fun resetAutoLockTimer() {
+        if (_uiState.value is VaultUiState.Unlocked) {
+            startAutoLockTimer()
+        }
+    }
 
     private val _uiState = MutableStateFlow<VaultUiState>(VaultUiState.Initializing)
     val uiState: StateFlow<VaultUiState> = _uiState.asStateFlow()
@@ -156,6 +195,7 @@ class VaultViewModel(
                     email = metadata.optString("email", ""),
                     encryptionType = encryptionType
                 )
+                startAutoLockTimer()
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Unlock failed", e)
                 val attempts = getFailedAttempts(fileName) + 1
@@ -209,6 +249,7 @@ class VaultViewModel(
                     email = email,
                     encryptionType = encryptionType
                 )
+                startAutoLockTimer()
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Vault creation failed", e)
                 _uiState.value = VaultUiState.Error("Failed to create vault: ${e.message}", VaultUiState.Locked)
@@ -296,6 +337,9 @@ class VaultViewModel(
     }
 
     fun lockVault() {
+        autoLockJob?.cancel()
+        autoLockJob = null
+        wasBackgrounded = false
         viewModelScope.launch {
             // Save the vault before locking so all data is encrypted to disk
             val file = vaultFile
@@ -336,6 +380,7 @@ class VaultViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        autoLockJob?.cancel()
         masterPassword?.fill('\u0000')
         masterPassword = null
     }

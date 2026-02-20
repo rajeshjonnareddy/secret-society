@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.VaultLogger
@@ -29,6 +31,11 @@ class MainActivity : ComponentActivity() {
             val viewModel: VaultViewModel = viewModel(
                 factory = VaultViewModel.Factory(filesDir, prefs)
             )
+            DisposableEffect(viewModel) {
+                val lifecycle = ProcessLifecycleOwner.get().lifecycle
+                lifecycle.addObserver(viewModel)
+                onDispose { lifecycle.removeObserver(viewModel) }
+            }
             val themeMode by viewModel.themeMode.collectAsState()
 
             VaultTheme(themeMode = themeMode) {

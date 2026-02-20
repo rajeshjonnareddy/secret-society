@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.argon2kt)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

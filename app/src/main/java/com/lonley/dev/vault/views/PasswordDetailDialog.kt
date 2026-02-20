@@ -3,6 +3,7 @@ package com.lonley.dev.vault.views
 import android.graphics.drawable.ColorDrawable
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,14 +134,19 @@ fun PasswordDetailDialog(
     onDelete: (id: String) -> Unit,
     onCopyToClipboard: (String) -> Unit
 ) {
-    var isEditing by remember { mutableStateOf(startInEditMode) }
+    val isDark = when (themeMode) {
+        ThemeMode.Dark -> true
+        ThemeMode.Light -> false
+        ThemeMode.System -> isSystemInDarkTheme()
+    }
+    var isEditing by remember(startInEditMode) { mutableStateOf(startInEditMode) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    var name by remember { mutableStateOf(entry.name) }
-    var username by remember { mutableStateOf(entry.username) }
-    var password by remember { mutableStateOf(entry.password) }
-    var website by remember { mutableStateOf(entry.website ?: "") }
-    var comments by remember { mutableStateOf(entry.comments ?: "") }
+    var name by remember(entry) { mutableStateOf(entry.name) }
+    var username by remember(entry) { mutableStateOf(entry.username) }
+    var password by remember(entry) { mutableStateOf(entry.password) }
+    var website by remember(entry) { mutableStateOf(entry.website ?: "") }
+    var comments by remember(entry) { mutableStateOf(entry.comments ?: "") }
 
     var nameDirty by remember { mutableStateOf(false) }
     var usernameDirty by remember { mutableStateOf(false) }
@@ -544,8 +550,8 @@ fun PasswordDetailDialog(
                                 .height(56.dp),
                             shape = MaterialTheme.shapes.extraLarge,
                             colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
+                                containerColor = if (isDark) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.error,
+                                contentColor = if (isDark) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onError
                             )
                         ) {
                             Icon(
