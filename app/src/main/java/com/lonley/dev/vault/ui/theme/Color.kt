@@ -10,6 +10,15 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
+// Accent seed colors (used for picker circles and scheme generation)
+val AccentBlue = Color(0xFF4285F4)
+val AccentTeal = Color(0xFF009688)
+val AccentGreen = Color(0xFF4CAF50)
+val AccentYellow = Color(0xFFFFC107)
+val AccentOrange = Color(0xFFFF9800)
+val AccentPurple = Color(0xFF9C27B0)
+val AccentGray = Color(0xFF607D8B)
+
 // Password-strength semantic colors
 val StrengthWeak = Color(0xFFE53935)
 val StrengthFair = Color(0xFFFB8C00)

@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,7 +32,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.AttachEmail
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Downloading
 import androidx.compose.material.icons.outlined.Mic
@@ -50,10 +51,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,11 +65,15 @@ import com.lonley.dev.vault.ui.theme.LocalGlassColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.VaultTheme
+import com.lonley.dev.vault.util.HapticHelper
 
 // ── Reusable glass card ──
 
@@ -310,7 +317,7 @@ private fun PasswordEntryItem(
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Copy password",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -321,7 +328,7 @@ private fun PasswordEntryItem(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Edit entry",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -335,16 +342,28 @@ private fun PasswordEntryItem(
 fun VaultScreen(
     vaultName: String,
     passwordEntries: List<PasswordEntry>,
+    settingsState: SettingsState? = null,
     isLoading: Boolean = false,
     onAddPasswordClick: () -> Unit,
     onBackClick: () -> Unit = {},
     onDownloadClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onEntryClick: (PasswordEntry) -> Unit = {},
     onCopyPassword: (PasswordEntry) -> Unit = {},
     onEditEntry: (PasswordEntry) -> Unit = {}
 ) {
+    val view = LocalView.current
+    val listState = rememberLazyListState()
     var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(settingsState?.hapticsEnabled, settingsState?.scrollVibrations) {
+        if (settingsState != null && settingsState.hapticsEnabled && settingsState.scrollVibrations["vault"] == true) {
+            snapshotFlow {
+                listState.firstVisibleItemIndex to (listState.firstVisibleItemScrollOffset / 50)
+            }.drop(1).collect { HapticHelper.performScrollTick(view, true) }
+        }
+    }
 
     val filterOptions = listOf("All", "Websites", "Apps", "Social", "Other")
     var selectedFilter by remember { mutableStateOf(filterOptions.first()) }
@@ -397,7 +416,10 @@ fun VaultScreen(
                 itemsIndexed(filterOptions) { _, filter ->
                     FilterChip(
                         selected = selectedFilter == filter,
-                        onClick = { selectedFilter = filter },
+                        onClick = {
+                            HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                            selectedFilter = filter
+                        },
                         label = {
                             Text(
                                 text = filter,
@@ -467,6 +489,7 @@ fun VaultScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -478,9 +501,18 @@ fun VaultScreen(
                     ) { entry ->
                         PasswordEntryItem(
                             entry = entry,
-                            onClick = { onEntryClick(entry) },
-                            onCopyClick = { onCopyPassword(entry) },
-                            onEditClick = { onEditEntry(entry) }
+                            onClick = {
+                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                onEntryClick(entry)
+                            },
+                            onCopyClick = {
+                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                onCopyPassword(entry)
+                            },
+                            onEditClick = {
+                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                onEditEntry(entry)
+                            }
                         )
                     }
                     item {
@@ -490,7 +522,7 @@ fun VaultScreen(
             }
         }
 
-        val iconTint = MaterialTheme.colorScheme.onSurface
+        val iconTint = MaterialTheme.colorScheme.primary
         val iconSize = Modifier.size(24.dp)
 
         Row(
@@ -515,7 +547,10 @@ fun VaultScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
-                    IconButton(onClick = onBackClick, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                        onBackClick()
+                    }, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Lock,
                             contentDescription = "Lock vault",
@@ -523,7 +558,10 @@ fun VaultScreen(
                             modifier = iconSize
                         )
                     }
-                    IconButton(onClick = onDownloadClick, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                        onDownloadClick()
+                    }, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Download,
                             contentDescription = "Download vault",
@@ -531,15 +569,21 @@ fun VaultScreen(
                             modifier = iconSize
                         )
                     }
-                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                        onProfileClick()
+                    }, modifier = Modifier.size(48.dp)) {
                         Icon(
-                            imageVector = Icons.Outlined.AttachEmail,
-                            contentDescription = null,
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = "Profile",
                             tint = iconTint,
                             modifier = iconSize
                         )
                     }
-                    IconButton(onClick = onSettingsClick, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                        onSettingsClick()
+                    }, modifier = Modifier.size(48.dp)) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = "Settings",
@@ -553,7 +597,10 @@ fun VaultScreen(
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
-                onClick = onAddPasswordClick
+                onClick = {
+                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                    onAddPasswordClick()
+                }
             ) {
                 Box(
                     contentAlignment = Alignment.Center,

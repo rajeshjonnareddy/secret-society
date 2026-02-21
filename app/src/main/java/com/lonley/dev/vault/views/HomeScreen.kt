@@ -45,11 +45,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.ui.theme.VaultTheme
+import com.lonley.dev.vault.util.HapticHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -57,8 +59,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onUploadClick: () -> Unit = {},
-    createNewVault: (vaultName: String, username: String, email: String, masterPassword: String, encryptionType: String) -> Unit = { _, _, _, _, _ -> }
+    createNewVault: (vaultName: String, username: String, email: String, masterPassword: String, encryptionType: String) -> Unit = { _, _, _, _, _ -> },
+    hapticsEnabled: Boolean = false
 ) {
+    val view = LocalView.current
     val sloganParts = listOf("Data", "Device", "Rules")
     var currentSloganIndex by remember { mutableIntStateOf(0) }
 
@@ -148,14 +152,14 @@ fun HomeScreen(
                     icon = Icons.Outlined.Smartphone,
                     title = "Offline",
                     description = "Never leaves your device",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
                 FeatureItem(
                     icon = Icons.Outlined.VerifiedUser,
                     title = "Zero-Knowledge",
                     description = "Master password never stored or transmitted",
-                    tint = MaterialTheme.colorScheme.tertiary
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -164,7 +168,10 @@ fun HomeScreen(
 
         // Fixed bottom CTAs
         Button(
-            onClick = { showCreateSheet = true },
+            onClick = {
+                HapticHelper.performClick(view, hapticsEnabled)
+                showCreateSheet = true
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -186,7 +193,10 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         FilledTonalButton(
-            onClick = onUploadClick,
+            onClick = {
+                HapticHelper.performClick(view, hapticsEnabled)
+                onUploadClick()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -215,6 +225,7 @@ fun HomeScreen(
             sheetState = sheetState
         ) {
             CreateVaultContent(
+                hapticsEnabled = hapticsEnabled,
                 onConfirm = { vaultName, username, email, masterPassword, encryptionType ->
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
                         if (!sheetState.isVisible) {

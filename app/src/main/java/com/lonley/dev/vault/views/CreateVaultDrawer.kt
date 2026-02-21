@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
@@ -51,13 +52,16 @@ import com.lonley.dev.vault.ui.theme.StrengthGood
 import com.lonley.dev.vault.ui.theme.StrengthStrong
 import com.lonley.dev.vault.ui.theme.StrengthWeak
 import com.lonley.dev.vault.ui.theme.VaultTheme
+import com.lonley.dev.vault.util.HapticHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateVaultContent(
     onConfirm: (vaultName: String, username: String, email: String, masterPassword: String, encryptionType: String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    hapticsEnabled: Boolean = false
 ) {
+    val view = LocalView.current
     var vaultName by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -172,10 +176,14 @@ fun CreateVaultContent(
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    passwordVisible = !passwordVisible
+                }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             },
@@ -198,7 +206,7 @@ fun CreateVaultContent(
                 Icon(
                     imageVector = Icons.Outlined.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
@@ -235,10 +243,14 @@ fun CreateVaultContent(
             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
-                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    confirmPasswordVisible = !confirmPasswordVisible
+                }) {
                     Icon(
                         imageVector = if (confirmPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password"
+                        contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             },
@@ -276,6 +288,7 @@ fun CreateVaultContent(
                     DropdownMenuItem(
                         text = { Text(type) },
                         onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
                             selectedEncryption = type
                             dropdownExpanded = false
                         },
@@ -293,7 +306,10 @@ fun CreateVaultContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             FilledTonalButton(
-                onClick = onCancel,
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onCancel()
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -306,7 +322,10 @@ fun CreateVaultContent(
                 )
             }
             Button(
-                onClick = { onConfirm(vaultName, username, email, masterPassword, selectedEncryption) },
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onConfirm(vaultName, username, email, masterPassword, selectedEncryption)
+                },
                 enabled = isFormValid,
                 modifier = Modifier
                     .weight(1f)

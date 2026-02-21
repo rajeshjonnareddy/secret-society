@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -39,12 +40,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.ui.theme.VaultTheme
+import com.lonley.dev.vault.util.HapticHelper
 
 @Composable
 fun AddPasswordContent(
     onConfirm: (name: String, username: String, password: String, website: String, comments: String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    hapticsEnabled: Boolean = false
 ) {
+    val view = LocalView.current
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -94,7 +98,8 @@ fun AddPasswordContent(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Badge,
-                    contentDescription = null
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
                 )
             },
             modifier = Modifier
@@ -117,7 +122,8 @@ fun AddPasswordContent(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Person,
-                    contentDescription = null
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
                 )
             },
             modifier = Modifier
@@ -142,14 +148,19 @@ fun AddPasswordContent(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
-                    contentDescription = null
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
                 )
             },
             trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    passwordVisible = !passwordVisible
+                }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             },
@@ -169,7 +180,8 @@ fun AddPasswordContent(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Language,
-                    contentDescription = null
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
                 )
             },
             modifier = Modifier.fillMaxWidth(),
@@ -188,7 +200,8 @@ fun AddPasswordContent(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.Notes,
-                    contentDescription = null
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
                 )
             },
             modifier = Modifier.fillMaxWidth(),
@@ -202,7 +215,10 @@ fun AddPasswordContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             FilledTonalButton(
-                onClick = onCancel,
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onCancel()
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -215,7 +231,10 @@ fun AddPasswordContent(
                 )
             }
             Button(
-                onClick = { onConfirm(name, username, password, website, comments) },
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onConfirm(name, username, password, website, comments)
+                },
                 enabled = isFormValid,
                 modifier = Modifier
                     .weight(1f)

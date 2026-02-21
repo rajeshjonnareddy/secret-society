@@ -23,6 +23,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -43,6 +44,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -53,14 +56,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.VaultUiState
+import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
 import com.lonley.dev.vault.views.HomeScreen
-import com.lonley.dev.vault.views.PasswordDetailDialog
+import com.lonley.dev.vault.views.PasswordDetailScreen
+import com.lonley.dev.vault.views.PasswordEditScreen
 import com.lonley.dev.vault.views.SettingsScreen
+import com.lonley.dev.vault.views.UserProfileScreen
 import com.lonley.dev.vault.views.VaultScreen
 import kotlinx.coroutines.launch
 
@@ -71,6 +78,7 @@ fun VaultApp(viewModel: VaultViewModel) {
 
     val uiState by viewModel.uiState.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val settingsState by viewModel.settingsState.collectAsState()
 
     val downloadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
@@ -138,7 +146,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                         encryptionType = encryptionType
                     )
                 },
-                onUploadClick = { viewModel.openExistingVault() }
+                onUploadClick = { viewModel.openExistingVault() },
+                hapticsEnabled = settingsState.hapticsEnabled
             )
         }
 
@@ -153,7 +162,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                         encryptionType = encryptionType
                     )
                 },
-                onUploadClick = { viewModel.openExistingVault() }
+                onUploadClick = { viewModel.openExistingVault() },
+                hapticsEnabled = settingsState.hapticsEnabled
             )
             LaunchedEffect(Unit) {
                 filePickerLauncher.launch(arrayOf("*/*"))
@@ -166,7 +176,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                 onDismiss = { viewModel.noVault() },
                 onConfirm = { password ->
                     viewModel.unlockVault(password.toCharArray())
-                }
+                },
+                hapticsEnabled = settingsState.hapticsEnabled
             )
         }
 
@@ -190,11 +201,14 @@ fun VaultApp(viewModel: VaultViewModel) {
         is VaultUiState.Unlocked -> {
             var showAddSheet by remember { mutableStateOf(false) }
             var showSettings by remember { mutableStateOf(false) }
+            var showProfile by remember { mutableStateOf(false) }
             var selectedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
-            var editMode by remember { mutableStateOf(false) }
+            var editingEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
+            val isSuspended by viewModel.isSuspended.collectAsState()
+            var suspendError by remember { mutableStateOf<String?>(null) }
 
             val copyToClipboard: (String) -> Unit = { text ->
                 viewModel.resetAutoLockTimer()
@@ -207,34 +221,104 @@ fun VaultApp(viewModel: VaultViewModel) {
                 downloadLauncher.launch(viewModel.getVaultFileName())
             }
 
-            if (showSettings) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Initial)
+                                if (!viewModel.isSuspended.value) {
+                                    viewModel.resetAutoLockTimer()
+                                }
+                            }
+                        }
+                    }
+            ) {
+
+            if (editingEntry != null) {
+                PasswordEditScreen(
+                    entry = editingEntry!!,
+                    settingsState = settingsState,
+                    onCancel = {
+                        editingEntry = null
+                    },
+                    onSave = { id, name, username, password, website, comments ->
+                        viewModel.resetAutoLockTimer()
+                        viewModel.updatePassword(id, name, username, password, website, comments)
+                        val updated = editingEntry!!.copy(
+                            name = name,
+                            username = username,
+                            password = password,
+                            website = website,
+                            comments = comments
+                        )
+                        selectedEntry = updated
+                        editingEntry = null
+                    }
+                )
+            } else if (selectedEntry != null) {
+                PasswordDetailScreen(
+                    entry = selectedEntry!!,
+                    settingsState = settingsState,
+                    onDismiss = { selectedEntry = null },
+                    onEditClick = { editingEntry = selectedEntry },
+                    onDelete = { id ->
+                        viewModel.deletePassword(id)
+                        selectedEntry = null
+                    },
+                    onCopyToClipboard = copyToClipboard
+                )
+            } else if (showProfile) {
                 viewModel.resetAutoLockTimer()
-                SettingsScreen(
+                UserProfileScreen(
                     username = state.username,
                     email = state.email,
                     encryptionType = state.encryptionType,
-                    themeMode = themeMode,
+                    settingsState = settingsState,
+                    onBackClick = { showProfile = false },
+                    onLockClick = { viewModel.lockVault() },
+                    onDownloadClick = launchDownload,
+                    onSettingsClick = {
+                        showProfile = false
+                        showSettings = true
+                    }
+                )
+            } else if (showSettings) {
+                viewModel.resetAutoLockTimer()
+                SettingsScreen(
+                    settingsState = settingsState,
                     onThemeModeChange = { viewModel.setThemeMode(it) },
+                    onAccentColorChange = { viewModel.setAccentColor(it) },
+                    onHapticsToggle = { viewModel.setHapticsEnabled(it) },
+                    onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
                     onBackClick = { showSettings = false },
                     onLockClick = { viewModel.lockVault() },
-                    onDownloadClick = launchDownload
+                    onDownloadClick = launchDownload,
+                    onProfileClick = {
+                        showSettings = false
+                        showProfile = true
+                    }
                 )
             } else {
                 VaultScreen(
                     vaultName = state.vaultName,
                     passwordEntries = state.entries,
+                    settingsState = settingsState,
                     isLoading = state.isLoading,
                     onAddPasswordClick = {
-                    viewModel.resetAutoLockTimer()
-                    showAddSheet = true
-                },
+                        viewModel.resetAutoLockTimer()
+                        showAddSheet = true
+                    },
                     onBackClick = { viewModel.lockVault() },
                     onDownloadClick = launchDownload,
+                    onProfileClick = {
+                        showProfile = true
+                    },
                     onSettingsClick = { showSettings = true },
                     onEntryClick = { entry ->
                         viewModel.resetAutoLockTimer()
                         selectedEntry = entry
-                        editMode = false
                     },
                     onCopyPassword = { entry ->
                         copyToClipboard(entry.password)
@@ -242,34 +326,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onEditEntry = { entry ->
                         viewModel.resetAutoLockTimer()
                         selectedEntry = entry
-                        editMode = true
+                        editingEntry = entry
                     }
-                )
-            }
-
-            if (selectedEntry != null) {
-                PasswordDetailDialog(
-                    entry = selectedEntry!!,
-                    startInEditMode = editMode,
-                    themeMode = themeMode,
-                    onDismiss = { selectedEntry = null },
-                    onSave = { id, name, username, password, website, comments ->
-                        viewModel.resetAutoLockTimer()
-                        viewModel.updatePassword(id, name, username, password, website, comments)
-                        selectedEntry = selectedEntry?.copy(
-                            name = name,
-                            username = username,
-                            password = password,
-                            website = website,
-                            comments = comments
-                        )
-                        editMode = false
-                    },
-                    onDelete = { id ->
-                        viewModel.deletePassword(id)
-                        selectedEntry = null
-                    },
-                    onCopyToClipboard = copyToClipboard
                 )
             }
 
@@ -296,9 +354,30 @@ fun VaultApp(viewModel: VaultViewModel) {
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false
                             }
-                        }
+                        },
+                        hapticsEnabled = settingsState.hapticsEnabled
                     )
                 }
+            }
+
+            } // end Box (touch interceptor)
+
+            // Suspend overlay — re-prompt password without re-decrypt
+            if (isSuspended) {
+                ExpressivePasswordDialog(
+                    foundVaultFileName = "",
+                    onDismiss = { viewModel.lockVault() },
+                    onConfirm = { password ->
+                        val matches = viewModel.verifyMasterPassword(password.toCharArray())
+                        if (!matches) {
+                            suspendError = "Wrong password. Try again."
+                        } else {
+                            suspendError = null
+                        }
+                    },
+                    errorMessage = suspendError,
+                    hapticsEnabled = settingsState.hapticsEnabled
+                )
             }
         }
 
@@ -322,7 +401,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onConfirm = { password ->
                         viewModel.unlockVault(password.toCharArray())
                     },
-                    errorMessage = state.message
+                    errorMessage = state.message,
+                    hapticsEnabled = settingsState.hapticsEnabled
                 )
             }
         }
@@ -335,8 +415,10 @@ fun ExpressivePasswordDialog(
     foundVaultFileName: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    hapticsEnabled: Boolean = false
 ) {
+    val view = LocalView.current
     var masterPasswordInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -385,10 +467,14 @@ fun ExpressivePasswordDialog(
                     shape = MaterialTheme.shapes.medium,
                     isError = errorMessage != null,
                     trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        IconButton(onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
+                            passwordVisible = !passwordVisible
+                        }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -401,12 +487,18 @@ fun ExpressivePasswordDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    OutlinedButton(onClick = {
+                        HapticHelper.performClick(view, hapticsEnabled)
+                        onDismiss()
+                    }) {
                         Text("Cancel")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onConfirm(masterPasswordInput) },
+                        onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
+                            onConfirm(masterPasswordInput)
+                        },
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
                         Icon(Icons.Default.LockOpen, contentDescription = null)

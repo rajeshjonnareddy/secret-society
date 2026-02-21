@@ -5,8 +5,11 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.lonley.dev.vault.data.SettingsPreferences
+import com.lonley.dev.vault.model.AccentColor
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SaveState
+import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.repository.VaultRepository
 import com.lonley.dev.vault.ui.theme.ThemeMode
@@ -16,15 +19,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.SharingStarted
 import java.io.File
 import java.util.UUID
 
 class VaultViewModel(
     private val repository: VaultRepository,
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    private val settingsPreferences: SettingsPreferences
 ) : ViewModel(), DefaultLifecycleObserver {
 
     private var wasBackgrounded = false
@@ -50,8 +57,8 @@ class VaultViewModel(
         autoLockJob = viewModelScope.launch {
             delay(60_000L)
             if (_uiState.value is VaultUiState.Unlocked) {
-                VaultLogger.i("ViewModel", "Inactivity timeout — auto-locking vault")
-                lockVault()
+                VaultLogger.i("ViewModel", "Inactivity timeout — suspending vault")
+                suspendVault()
             }
         }
     }
@@ -62,17 +69,64 @@ class VaultViewModel(
         }
     }
 
+    private val _isSuspended = MutableStateFlow(false)
+    val isSuspended: StateFlow<Boolean> = _isSuspended.asStateFlow()
+
+    fun suspendVault() {
+        autoLockJob?.cancel()
+        _isSuspended.value = true
+    }
+
+    fun verifyMasterPassword(password: CharArray): Boolean {
+        val stored = masterPassword ?: return false
+        val matches = password.contentEquals(stored)
+        password.fill('\u0000')
+        if (matches) {
+            _isSuspended.value = false
+            startAutoLockTimer()
+        }
+        return matches
+    }
+
     private val _uiState = MutableStateFlow<VaultUiState>(VaultUiState.Initializing)
     val uiState: StateFlow<VaultUiState> = _uiState.asStateFlow()
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(ThemeMode.System)
-    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+    private val _settingsState = MutableStateFlow(settingsPreferences.load())
+    val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
+
+    val themeMode: StateFlow<ThemeMode> = _settingsState
+        .map { it.themeMode }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, _settingsState.value.themeMode)
+
+    val accentColor: StateFlow<AccentColor> = _settingsState
+        .map { it.accentColor }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, _settingsState.value.accentColor)
 
     fun setThemeMode(mode: ThemeMode) {
-        _themeMode.value = mode
+        updateSettings { it.copy(themeMode = mode) }
+    }
+
+    fun setAccentColor(color: AccentColor) {
+        updateSettings { it.copy(accentColor = color) }
+    }
+
+    fun setHapticsEnabled(enabled: Boolean) {
+        updateSettings { it.copy(hapticsEnabled = enabled) }
+    }
+
+    fun setScrollVibration(screen: String, enabled: Boolean) {
+        updateSettings { current ->
+            current.copy(scrollVibrations = current.scrollVibrations + (screen to enabled))
+        }
+    }
+
+    private fun updateSettings(transform: (SettingsState) -> SettingsState) {
+        val updated = transform(_settingsState.value)
+        _settingsState.value = updated
+        settingsPreferences.save(updated)
     }
 
     fun getVaultBytes(): ByteArray? {
@@ -340,6 +394,7 @@ class VaultViewModel(
         autoLockJob?.cancel()
         autoLockJob = null
         wasBackgrounded = false
+        _isSuspended.value = false
         viewModelScope.launch {
             // Save the vault before locking so all data is encrypted to disk
             val file = vaultFile
@@ -373,6 +428,7 @@ class VaultViewModel(
         vaultFile = null
         vaultMetadata = null
         entries.clear()
+        _isSuspended.value = false
         _uiState.value = VaultUiState.Locked
         _saveState.value = SaveState.Idle
         VaultLogger.i("ViewModel", "No vault found.")
@@ -387,11 +443,12 @@ class VaultViewModel(
 
     class Factory(
         private val filesDir: File,
-        private val prefs: SharedPreferences
+        private val prefs: SharedPreferences,
+        private val settingsPreferences: SettingsPreferences
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return VaultViewModel(VaultRepository(filesDir), prefs) as T
+            return VaultViewModel(VaultRepository(filesDir), prefs, settingsPreferences) as T
         }
     }
 }
