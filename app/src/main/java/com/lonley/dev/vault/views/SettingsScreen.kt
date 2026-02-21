@@ -348,6 +348,8 @@ fun SettingsScreen(
                                 ScrollVibrationCheckbox("Home", "home", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Vault", "vault", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Settings", "settings", settingsState, onScrollVibrationToggle)
+                                ScrollVibrationCheckbox("Password Detail", "passwordDetail", settingsState, onScrollVibrationToggle)
+                                ScrollVibrationCheckbox("Edit Entry", "editEntry", settingsState, onScrollVibrationToggle)
                             }
                         }
                     }

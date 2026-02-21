@@ -1,7 +1,6 @@
 package com.lonley.dev.vault.views
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,10 +39,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,9 +57,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
-import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.HapticHelper
 
 private fun formatTimestamp(epochMs: Long): String {
@@ -123,11 +124,6 @@ fun PasswordDetailScreen(
     onDelete: (id: String) -> Unit,
     onCopyToClipboard: (String) -> Unit
 ) {
-    val isDark = when (settingsState.themeMode) {
-        ThemeMode.Dark -> true
-        ThemeMode.Light -> false
-        ThemeMode.System -> isSystemInDarkTheme()
-    }
     val hapticView = LocalView.current
     var passwordVisible by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -180,10 +176,20 @@ fun PasswordDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Scrollable content ──
+            val scrollState = rememberScrollState()
+
+            LaunchedEffect(settingsState.hapticsEnabled, settingsState.scrollVibrations) {
+                if (settingsState.hapticsEnabled && settingsState.scrollVibrations["passwordDetail"] == true) {
+                    snapshotFlow { scrollState.value / 50 }
+                        .drop(1)
+                        .collect { HapticHelper.performScrollTick(hapticView, true) }
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
             ) {
                 val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
@@ -431,10 +437,20 @@ fun PasswordEditScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // ── Scrollable form ──
+        val scrollState = rememberScrollState()
+
+        LaunchedEffect(settingsState.hapticsEnabled, settingsState.scrollVibrations) {
+            if (settingsState.hapticsEnabled && settingsState.scrollVibrations["editEntry"] == true) {
+                snapshotFlow { scrollState.value / 50 }
+                    .drop(1)
+                    .collect { HapticHelper.performScrollTick(hapticView, true) }
+            }
+        }
+
         Column(
             modifier = Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             OutlinedTextField(
                 value = name,

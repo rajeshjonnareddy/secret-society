@@ -208,7 +208,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
             val isSuspended by viewModel.isSuspended.collectAsState()
-            var suspendError by remember { mutableStateOf<String?>(null) }
+            val suspendError by viewModel.suspendError.collectAsState()
 
             val copyToClipboard: (String) -> Unit = { text ->
                 viewModel.resetAutoLockTimer()
@@ -221,7 +221,17 @@ fun VaultApp(viewModel: VaultViewModel) {
                 downloadLauncher.launch(viewModel.getVaultFileName())
             }
 
-            Box(
+            if (isSuspended) {
+                ExpressivePasswordDialog(
+                    foundVaultFileName = "",
+                    onDismiss = { viewModel.lockVault() },
+                    onConfirm = { password ->
+                        viewModel.verifyMasterPassword(password.toCharArray())
+                    },
+                    errorMessage = suspendError,
+                    hapticsEnabled = settingsState.hapticsEnabled
+                )
+            } else Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
@@ -361,24 +371,6 @@ fun VaultApp(viewModel: VaultViewModel) {
             }
 
             } // end Box (touch interceptor)
-
-            // Suspend overlay — re-prompt password without re-decrypt
-            if (isSuspended) {
-                ExpressivePasswordDialog(
-                    foundVaultFileName = "",
-                    onDismiss = { viewModel.lockVault() },
-                    onConfirm = { password ->
-                        val matches = viewModel.verifyMasterPassword(password.toCharArray())
-                        if (!matches) {
-                            suspendError = "Wrong password. Try again."
-                        } else {
-                            suspendError = null
-                        }
-                    },
-                    errorMessage = suspendError,
-                    hapticsEnabled = settingsState.hapticsEnabled
-                )
-            }
         }
 
         is VaultUiState.Error -> {

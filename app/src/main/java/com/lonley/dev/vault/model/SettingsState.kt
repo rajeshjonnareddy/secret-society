@@ -14,6 +14,8 @@ data class SettingsState(
     val scrollVibrations: Map<String, Boolean> = mapOf(
         "home" to false,
         "vault" to false,
-        "settings" to false
+        "settings" to false,
+        "passwordDetail" to false,
+        "editEntry" to false
     )
 )

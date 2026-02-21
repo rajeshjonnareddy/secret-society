@@ -72,18 +72,49 @@ class VaultViewModel(
     private val _isSuspended = MutableStateFlow(false)
     val isSuspended: StateFlow<Boolean> = _isSuspended.asStateFlow()
 
+    private val _suspendError = MutableStateFlow<String?>(null)
+    val suspendError: StateFlow<String?> = _suspendError.asStateFlow()
+
     fun suspendVault() {
         autoLockJob?.cancel()
+        _suspendError.value = null
         _isSuspended.value = true
     }
 
     fun verifyMasterPassword(password: CharArray): Boolean {
         val stored = masterPassword ?: return false
+        val fileName = vaultFile?.name ?: return false
         val matches = password.contentEquals(stored)
         password.fill('\u0000')
         if (matches) {
+            clearFailedAttempts(fileName)
+            _suspendError.value = null
             _isSuspended.value = false
             startAutoLockTimer()
+        } else {
+            val attempts = getFailedAttempts(fileName) + 1
+            setFailedAttempts(fileName, attempts)
+            val remaining = MAX_ATTEMPTS - attempts
+
+            if (remaining <= 0) {
+                VaultLogger.w("ViewModel", "Max suspend attempts reached — deleting vault: $fileName")
+                _isSuspended.value = false
+                viewModelScope.launch {
+                    repository.deleteAllVaultFiles()
+                    clearFailedAttempts(fileName)
+                    masterPassword?.fill('\u0000')
+                    masterPassword = null
+                    vaultFile = null
+                    vaultMetadata = null
+                    entries.clear()
+                    _uiState.value = VaultUiState.Error(
+                        "All 5 attempts used. Vault has been permanently deleted.",
+                        VaultUiState.Locked
+                    )
+                }
+            } else {
+                _suspendError.value = "Wrong password. $remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted."
+            }
         }
         return matches
     }
