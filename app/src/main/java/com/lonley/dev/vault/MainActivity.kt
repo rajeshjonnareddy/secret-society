@@ -41,8 +41,9 @@ class MainActivity : ComponentActivity() {
             }
             val themeMode by viewModel.themeMode.collectAsState()
             val accentColor by viewModel.accentColor.collectAsState()
+            val settingsState by viewModel.settingsState.collectAsState()
 
-            VaultTheme(themeMode = themeMode, accentColor = accentColor) {
+            VaultTheme(themeMode = themeMode, accentColor = accentColor, fontScale = settingsState.fontScale.factor) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent

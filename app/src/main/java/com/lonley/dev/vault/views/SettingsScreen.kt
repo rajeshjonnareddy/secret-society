@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.AccentBlue
 import com.lonley.dev.vault.ui.theme.AccentGray
@@ -78,6 +79,10 @@ import com.lonley.dev.vault.ui.theme.AccentOrange
 import com.lonley.dev.vault.ui.theme.AccentPurple
 import com.lonley.dev.vault.ui.theme.AccentTeal
 import com.lonley.dev.vault.ui.theme.AccentYellow
+import com.lonley.dev.vault.ui.theme.AccentRed
+import com.lonley.dev.vault.ui.theme.AccentPink
+import com.lonley.dev.vault.ui.theme.AccentIndigo
+import com.lonley.dev.vault.ui.theme.AccentBrown
 import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.HapticHelper
 
@@ -87,6 +92,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onAccentColorChange: (AccentColor) -> Unit,
     onHapticsToggle: (Boolean) -> Unit,
+    onFontScaleChange: (FontScale) -> Unit = {},
     onScrollVibrationToggle: (String, Boolean) -> Unit,
     onBackClick: () -> Unit,
     onLockClick: () -> Unit,
@@ -257,6 +263,88 @@ fun SettingsScreen(
                             title = "Language",
                             subtitle = settingsState.language
                         )
+
+                        SettingsDivider()
+
+                        // Font Size (expandable)
+                        var fontSizeExpanded by remember { mutableStateOf(false) }
+                        val fontSizeChevronRotation by animateFloatAsState(
+                            targetValue = if (fontSizeExpanded) 180f else 0f,
+                            label = "fontSizeChevron"
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                    fontSizeExpanded = !fontSizeExpanded
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Font Size",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = settingsState.fontScale.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ExpandMore,
+                                contentDescription = if (fontSizeExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.rotate(fontSizeChevronRotation)
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = fontSizeExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                            ) {
+                                FontScale.entries.forEach { scale ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onFontScaleChange(scale)
+                                            }
+                                    ) {
+                                        RadioButton(
+                                            selected = settingsState.fontScale == scale,
+                                            onClick = {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onFontScaleChange(scale)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = scale.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -442,9 +530,15 @@ fun SettingsScreen(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(28.dp)
+                    )
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -492,6 +586,10 @@ fun SettingsScreen(
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                ),
                 onClick = onBackClick
             ) {
                 Box(
@@ -585,7 +683,11 @@ private fun AccentColorPicker(
         AccentColor.Yellow to AccentYellow,
         AccentColor.Orange to AccentOrange,
         AccentColor.Purple to AccentPurple,
-        AccentColor.Gray to AccentGray
+        AccentColor.Gray to AccentGray,
+        AccentColor.Red to AccentRed,
+        AccentColor.Pink to AccentPink,
+        AccentColor.Indigo to AccentIndigo,
+        AccentColor.Brown to AccentBrown
     )
 
     Row(

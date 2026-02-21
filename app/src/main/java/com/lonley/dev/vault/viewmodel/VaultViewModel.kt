@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.lonley.dev.vault.data.SettingsPreferences
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
@@ -154,6 +155,10 @@ class VaultViewModel(
         }
     }
 
+    fun setFontScale(scale: FontScale) {
+        updateSettings { it.copy(fontScale = scale) }
+    }
+
     private fun updateSettings(transform: (SettingsState) -> SettingsState) {
         val updated = transform(_settingsState.value)
         _settingsState.value = updated
@@ -174,6 +179,7 @@ class VaultViewModel(
     private var encryptionType: String = "AES-256-GCM"
     private var vaultMetadata: JSONObject? = null
     private val entries = mutableListOf<PasswordEntry>()
+    private var lastUpdatedAt: Long = 0L
 
     companion object {
         private const val MAX_ATTEMPTS = 5
@@ -273,12 +279,14 @@ class VaultViewModel(
                 val vaultName = metadata.optString("vaultName", "Vault")
                 VaultLogger.i("ViewModel", "Vault unlocked: $vaultName, ${entries.size} entries")
                 clearFailedAttempts(fileName)
+                lastUpdatedAt = file.lastModified()
                 _uiState.value = VaultUiState.Unlocked(
                     vaultName = vaultName,
                     entries = entries.toList(),
                     username = metadata.optString("username", ""),
                     email = metadata.optString("email", ""),
-                    encryptionType = encryptionType
+                    encryptionType = encryptionType,
+                    lastUpdatedAt = lastUpdatedAt
                 )
                 startAutoLockTimer()
             } catch (e: Exception) {
@@ -353,10 +361,11 @@ class VaultViewModel(
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
+        lastUpdatedAt = System.currentTimeMillis()
 
         val currentState = _uiState.value
         if (currentState is VaultUiState.Unlocked) {
-            _uiState.value = currentState.copy(entries = entries.toList())
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
         }
 
         saveVaultAsync()
@@ -373,9 +382,10 @@ class VaultViewModel(
             website = website,
             comments = comments
         )
+        lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value
         if (currentState is VaultUiState.Unlocked) {
-            _uiState.value = currentState.copy(entries = entries.toList())
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
         }
         saveVaultAsync()
     }
@@ -384,9 +394,10 @@ class VaultViewModel(
         val removed = entries.removeAll { it.id == id }
         if (!removed) return
         VaultLogger.i("ViewModel", "Deleted password entry: id=$id")
+        lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value
         if (currentState is VaultUiState.Unlocked) {
-            _uiState.value = currentState.copy(entries = entries.toList())
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
         }
         saveVaultAsync()
     }

@@ -300,6 +300,126 @@ private fun grayDark() = darkColorScheme(
     outline = Color(0xFF8A9296), outlineVariant = Color(0xFF40484C),
 )
 
+private fun redLight() = lightColorScheme(
+    primary = Color(0xFFE53935), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFDAD6), onPrimaryContainer = Color(0xFF410002),
+    secondary = Color(0xFF775652), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFFDAD6), onSecondaryContainer = Color(0xFF2C1513),
+    tertiary = Color(0xFF755A2F), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFDDB3), onTertiaryContainer = Color(0xFF281800),
+    error = Color(0xFFB3261E), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC), onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFFFFBFE), onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE), onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFF5DDDA), onSurfaceVariant = Color(0xFF534341),
+    outline = Color(0xFF857370), outlineVariant = Color(0xFFD8C2BF),
+)
+
+private fun redDark() = darkColorScheme(
+    primary = Color(0xFFFFB4AB), onPrimary = Color(0xFF690005),
+    primaryContainer = Color(0xFFC62828), onPrimaryContainer = Color(0xFFFFDAD6),
+    secondary = Color(0xFFE7BDB8), onSecondary = Color(0xFF442927),
+    secondaryContainer = Color(0xFF5D3F3B), onSecondaryContainer = Color(0xFFFFDAD6),
+    tertiary = Color(0xFFE5C18D), onTertiary = Color(0xFF412D05),
+    tertiaryContainer = Color(0xFF5B431A), onTertiaryContainer = Color(0xFFFFDDB3),
+    error = Color(0xFFF2B8B5), onError = Color(0xFF601410),
+    errorContainer = Color(0xFF8C1D18), onErrorContainer = Color(0xFFF9DEDC),
+    background = Color(0xFF1C1B1F), onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F), onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF534341), onSurfaceVariant = Color(0xFFD8C2BF),
+    outline = Color(0xFFA08C8A), outlineVariant = Color(0xFF534341),
+)
+
+private fun pinkLight() = lightColorScheme(
+    primary = Color(0xFFE91E63), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFD9E2), onPrimaryContainer = Color(0xFF3E001D),
+    secondary = Color(0xFF74565F), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFFD9E2), onSecondaryContainer = Color(0xFF2B151C),
+    tertiary = Color(0xFF7C5635), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFDCC2), onTertiaryContainer = Color(0xFF2E1500),
+    error = Color(0xFFB3261E), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC), onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFFFFBFE), onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE), onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFF2DDE1), onSurfaceVariant = Color(0xFF514347),
+    outline = Color(0xFF837377), outlineVariant = Color(0xFFD5C2C6),
+)
+
+private fun pinkDark() = darkColorScheme(
+    primary = Color(0xFFFFB1C8), onPrimary = Color(0xFF650033),
+    primaryContainer = Color(0xFFC2185B), onPrimaryContainer = Color(0xFFFFD9E2),
+    secondary = Color(0xFFE3BDC6), onSecondary = Color(0xFF422931),
+    secondaryContainer = Color(0xFF5B3F47), onSecondaryContainer = Color(0xFFFFD9E2),
+    tertiary = Color(0xFFEFBD94), onTertiary = Color(0xFF48290C),
+    tertiaryContainer = Color(0xFF623F20), onTertiaryContainer = Color(0xFFFFDCC2),
+    error = Color(0xFFF2B8B5), onError = Color(0xFF601410),
+    errorContainer = Color(0xFF8C1D18), onErrorContainer = Color(0xFFF9DEDC),
+    background = Color(0xFF1C1B1F), onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F), onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF514347), onSurfaceVariant = Color(0xFFD5C2C6),
+    outline = Color(0xFF9E8C90), outlineVariant = Color(0xFF514347),
+)
+
+private fun indigoLight() = lightColorScheme(
+    primary = Color(0xFF3F51B5), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFDEE0FF), onPrimaryContainer = Color(0xFF00105C),
+    secondary = Color(0xFF5C5D72), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFE1E0F9), onSecondaryContainer = Color(0xFF191A2C),
+    tertiary = Color(0xFF78536B), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFD8EE), onTertiaryContainer = Color(0xFF2E1126),
+    error = Color(0xFFB3261E), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC), onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFFFFBFE), onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE), onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFE3E1EC), onSurfaceVariant = Color(0xFF46464F),
+    outline = Color(0xFF767680), outlineVariant = Color(0xFFC7C5D0),
+)
+
+private fun indigoDark() = darkColorScheme(
+    primary = Color(0xFFBAC3FF), onPrimary = Color(0xFF08218A),
+    primaryContainer = Color(0xFF283593), onPrimaryContainer = Color(0xFFDEE0FF),
+    secondary = Color(0xFFC5C4DD), onSecondary = Color(0xFF2E2F42),
+    secondaryContainer = Color(0xFF454559), onSecondaryContainer = Color(0xFFE1E0F9),
+    tertiary = Color(0xFFE8B9D5), onTertiary = Color(0xFF46263C),
+    tertiaryContainer = Color(0xFF5F3C53), onTertiaryContainer = Color(0xFFFFD8EE),
+    error = Color(0xFFF2B8B5), onError = Color(0xFF601410),
+    errorContainer = Color(0xFF8C1D18), onErrorContainer = Color(0xFFF9DEDC),
+    background = Color(0xFF1C1B1F), onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F), onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF46464F), onSurfaceVariant = Color(0xFFC7C5D0),
+    outline = Color(0xFF90909A), outlineVariant = Color(0xFF46464F),
+)
+
+private fun brownLight() = lightColorScheme(
+    primary = Color(0xFF795548), onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFDDD1), onPrimaryContainer = Color(0xFF2E150B),
+    secondary = Color(0xFF765749), onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFFFDDD1), onSecondaryContainer = Color(0xFF2C150C),
+    tertiary = Color(0xFF636032), onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFEAE5AA), onTertiaryContainer = Color(0xFF1E1C00),
+    error = Color(0xFFB3261E), onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC), onErrorContainer = Color(0xFF410E0B),
+    background = Color(0xFFFFFBFE), onBackground = Color(0xFF1C1B1F),
+    surface = Color(0xFFFFFBFE), onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFF5DED5), onSurfaceVariant = Color(0xFF53443D),
+    outline = Color(0xFF85736C), outlineVariant = Color(0xFFD8C2BA),
+)
+
+private fun brownDark() = darkColorScheme(
+    primary = Color(0xFFD7BCA9), onPrimary = Color(0xFF3B2317),
+    primaryContainer = Color(0xFF5D4037), onPrimaryContainer = Color(0xFFFFDDD1),
+    secondary = Color(0xFFE7BDB0), onSecondary = Color(0xFF442A1F),
+    secondaryContainer = Color(0xFF5D4034), onSecondaryContainer = Color(0xFFFFDDD1),
+    tertiary = Color(0xFFCDC990), onTertiary = Color(0xFF343209),
+    tertiaryContainer = Color(0xFF4B491E), onTertiaryContainer = Color(0xFFEAE5AA),
+    error = Color(0xFFF2B8B5), onError = Color(0xFF601410),
+    errorContainer = Color(0xFF8C1D18), onErrorContainer = Color(0xFFF9DEDC),
+    background = Color(0xFF1C1B1F), onBackground = Color(0xFFE6E1E5),
+    surface = Color(0xFF1C1B1F), onSurface = Color(0xFFE6E1E5),
+    surfaceVariant = Color(0xFF53443D), onSurfaceVariant = Color(0xFFD8C2BA),
+    outline = Color(0xFFA08D85), outlineVariant = Color(0xFF53443D),
+)
+
 internal fun accentColorScheme(accent: AccentColor, dark: Boolean): ColorScheme {
     return when (accent) {
         AccentColor.Blue -> if (dark) blueDark() else blueLight()
@@ -309,6 +429,10 @@ internal fun accentColorScheme(accent: AccentColor, dark: Boolean): ColorScheme 
         AccentColor.Orange -> if (dark) orangeDark() else orangeLight()
         AccentColor.Purple -> if (dark) purpleDark() else purpleLight()
         AccentColor.Gray -> if (dark) grayDark() else grayLight()
+        AccentColor.Red -> if (dark) redDark() else redLight()
+        AccentColor.Pink -> if (dark) pinkDark() else pinkLight()
+        AccentColor.Indigo -> if (dark) indigoDark() else indigoLight()
+        AccentColor.Brown -> if (dark) brownDark() else brownLight()
         AccentColor.Auto -> if (dark) DarkColorScheme else LightColorScheme
     }
 }
@@ -331,6 +455,7 @@ val LocalGlassColors = staticCompositionLocalOf {
 fun VaultTheme(
     themeMode: ThemeMode = ThemeMode.System,
     accentColor: AccentColor = AccentColor.Auto,
+    fontScale: Float = 1.0f,
     darkTheme: Boolean = when (themeMode) {
         ThemeMode.System -> isSystemInDarkTheme()
         ThemeMode.Light -> false
@@ -372,9 +497,11 @@ fun VaultTheme(
         )
     }
 
+    val typography = scaledTypography(fontScale)
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = typography,
     ) {
         CompositionLocalProvider(LocalGlassColors provides glassColors) {
             Box(

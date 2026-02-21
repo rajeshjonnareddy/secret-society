@@ -1,5 +1,8 @@
 package com.lonley.dev.vault.views
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +26,7 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,8 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +51,7 @@ fun UserProfileScreen(
     username: String,
     email: String,
     encryptionType: String,
+    lastUpdatedAt: Long = 0L,
     settingsState: SettingsState,
     onBackClick: () -> Unit,
     onLockClick: () -> Unit,
@@ -52,6 +59,23 @@ fun UserProfileScreen(
     onSettingsClick: () -> Unit
 ) {
     val view = LocalView.current
+
+    val lastUpdatedText = remember(lastUpdatedAt) {
+        if (lastUpdatedAt == 0L) "Never" else {
+            val diff = System.currentTimeMillis() - lastUpdatedAt
+            val minutes = diff / 60_000
+            val hours = minutes / 60
+            val days = hours / 24
+            when {
+                minutes < 1 -> "Just now"
+                minutes < 60 -> "${minutes}m ago"
+                hours < 24 -> "${hours}h ago"
+                days < 30 -> "${days}d ago"
+                days < 365 -> "${days / 30}mo ago"
+                else -> "${days / 365}y ago"
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -87,6 +111,8 @@ fun UserProfileScreen(
                         ProfileInfoRow(label = "Email", value = email.ifEmpty { "Not set" }, icon = Icons.Outlined.AttachEmail)
                         ProfileDivider()
                         ProfileInfoRow(label = "Encryption", value = encryptionType, icon = Icons.Outlined.Lock)
+                        ProfileDivider()
+                        ProfileInfoRow(label = "Last Updated", value = lastUpdatedText, icon = Icons.Outlined.Update)
                     }
                 }
 
@@ -129,9 +155,15 @@ fun UserProfileScreen(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(28.dp)
+                    )
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -185,6 +217,10 @@ fun UserProfileScreen(
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                ),
                 onClick = {
                     HapticHelper.performClick(view, settingsState.hapticsEnabled)
                     onBackClick()

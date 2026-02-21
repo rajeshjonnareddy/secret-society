@@ -58,6 +58,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
+import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.util.HapticHelper
@@ -285,6 +286,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                     username = state.username,
                     email = state.email,
                     encryptionType = state.encryptionType,
+                    lastUpdatedAt = state.lastUpdatedAt,
                     settingsState = settingsState,
                     onBackClick = { showProfile = false },
                     onLockClick = { viewModel.lockVault() },
@@ -301,6 +303,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onThemeModeChange = { viewModel.setThemeMode(it) },
                     onAccentColorChange = { viewModel.setAccentColor(it) },
                     onHapticsToggle = { viewModel.setHapticsEnabled(it) },
+                    onFontScaleChange = { viewModel.setFontScale(it) },
                     onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
                     onBackClick = { showSettings = false },
                     onLockClick = { viewModel.lockVault() },
@@ -316,6 +319,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                     passwordEntries = state.entries,
                     settingsState = settingsState,
                     isLoading = state.isLoading,
+                    lastUpdatedAt = state.lastUpdatedAt,
                     onAddPasswordClick = {
                         viewModel.resetAutoLockTimer()
                         showAddSheet = true

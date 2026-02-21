@@ -2,6 +2,7 @@ package com.lonley.dev.vault.data
 
 import android.content.SharedPreferences
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.ThemeMode
 
@@ -23,6 +24,12 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         val language = prefs.getString(KEY_LANGUAGE, "English") ?: "English"
         val hapticsEnabled = prefs.getBoolean(KEY_HAPTICS, true)
 
+        val fontScale = try {
+            FontScale.valueOf(prefs.getString(KEY_FONT_SCALE, FontScale.Default.name)!!)
+        } catch (_: Exception) {
+            FontScale.Default
+        }
+
         val scrollVibrations = mapOf(
             "home" to prefs.getBoolean(KEY_SCROLL_HOME, false),
             "vault" to prefs.getBoolean(KEY_SCROLL_VAULT, false),
@@ -34,6 +41,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             accentColor = accentColor,
             language = language,
             hapticsEnabled = hapticsEnabled,
+            fontScale = fontScale,
             scrollVibrations = scrollVibrations
         )
     }
@@ -44,6 +52,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             .putString(KEY_ACCENT_COLOR, state.accentColor.name)
             .putString(KEY_LANGUAGE, state.language)
             .putBoolean(KEY_HAPTICS, state.hapticsEnabled)
+            .putString(KEY_FONT_SCALE, state.fontScale.name)
             .putBoolean(KEY_SCROLL_HOME, state.scrollVibrations["home"] ?: false)
             .putBoolean(KEY_SCROLL_VAULT, state.scrollVibrations["vault"] ?: false)
             .putBoolean(KEY_SCROLL_SETTINGS, state.scrollVibrations["settings"] ?: false)
@@ -58,5 +67,6 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         private const val KEY_SCROLL_HOME = "scroll_vibration_home"
         private const val KEY_SCROLL_VAULT = "scroll_vibration_vault"
         private const val KEY_SCROLL_SETTINGS = "scroll_vibration_settings"
+        private const val KEY_FONT_SCALE = "font_scale"
     }
 }

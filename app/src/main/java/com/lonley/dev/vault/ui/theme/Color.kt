@@ -18,6 +18,10 @@ val AccentYellow = Color(0xFFFFC107)
 val AccentOrange = Color(0xFFFF9800)
 val AccentPurple = Color(0xFF9C27B0)
 val AccentGray = Color(0xFF607D8B)
+val AccentRed = Color(0xFFE53935)
+val AccentPink = Color(0xFFE91E63)
+val AccentIndigo = Color(0xFF3F51B5)
+val AccentBrown = Color(0xFF795548)
 
 // Password-strength semantic colors
 val StrengthWeak = Color(0xFFE53935)
