@@ -559,7 +559,9 @@ fun PasswordEditScreen(
         isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
         price: String?, subscriptionEmail: String?, startDate: Long?,
         reminderEnabled: Boolean
-    ) -> Unit
+    ) -> Unit,
+    onDelete: (id: String) -> Unit = {},
+    onToggleFavorite: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
     var passwordVisible by remember { mutableStateOf(false) }
@@ -579,6 +581,7 @@ fun PasswordEditScreen(
     var startDate by remember(entry) { mutableStateOf(entry.startDate) }
     var reminderEnabled by remember(entry) { mutableStateOf(entry.reminderEnabled) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     var nameDirty by remember { mutableStateOf(false) }
     var usernameDirty by remember { mutableStateOf(false) }
@@ -594,13 +597,44 @@ fun PasswordEditScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Header
-        Text(
-            text = "Edit entry",
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        // Header row: title + favorite star + delete icon
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Edit entry",
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                    isFavorite = !isFavorite
+                    onToggleFavorite()
+                }
+            ) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                    showDeleteConfirm = true
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete entry",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
         Text(
             text = if (isSubscription) "Modify your subscription." else "Modify your saved credential.",
             style = MaterialTheme.typography.bodyLarge,
@@ -761,7 +795,8 @@ fun PasswordEditScreen(
                     Text(
                         text = "Subscription",
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Switch(
@@ -882,7 +917,8 @@ fun PasswordEditScreen(
                             Text(
                                 text = "Remind before renewal",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Switch(
@@ -971,5 +1007,38 @@ fun PasswordEditScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Entry") },
+            text = { Text("Are you sure you want to delete \"${entry.name}\"? This cannot be undone.") },
+            confirmButton = {
+                val confirmView = LocalView.current
+                TextButton(
+                    onClick = {
+                        HapticHelper.performClick(confirmView, settingsState.hapticsEnabled)
+                        showDeleteConfirm = false
+                        onDelete(entry.id)
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                val dismissView = LocalView.current
+                TextButton(onClick = {
+                    HapticHelper.performClick(dismissView, settingsState.hapticsEnabled)
+                    showDeleteConfirm = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

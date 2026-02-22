@@ -265,7 +265,8 @@ fun AddPasswordContent(
                 Text(
                     text = "Subscription",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Switch(
@@ -386,7 +387,8 @@ fun AddPasswordContent(
                         Text(
                             text = "Remind before renewal",
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Switch(

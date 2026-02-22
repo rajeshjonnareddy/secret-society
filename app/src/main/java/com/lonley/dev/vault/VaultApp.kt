@@ -1,5 +1,11 @@
 package com.lonley.dev.vault
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -274,133 +280,192 @@ fun VaultApp(viewModel: VaultViewModel) {
                 }
             }
 
-            if (editingEntry != null) {
-                PasswordEditScreen(
-                    entry = editingEntry!!,
-                    settingsState = settingsState,
-                    onCancel = {
-                        editingEntry = null
-                    },
-                    onSave = { id, name, username, password, website, comments,
-                               isFavorite, isSubscription, planType, price,
-                               subscriptionEmail, startDate, reminderEnabled ->
-                        viewModel.resetAutoLockTimer()
-                        if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        viewModel.updatePassword(
-                            id, name, username, password, website, comments,
-                            isFavorite, isSubscription, planType, price,
-                            subscriptionEmail, startDate, reminderEnabled
+            // Snapshot entries so exit animations don't crash on null
+            var lastSelectedEntry by remember { mutableStateOf(selectedEntry) }
+            var lastEditingEntry by remember { mutableStateOf(editingEntry) }
+            if (selectedEntry != null) lastSelectedEntry = selectedEntry
+            if (editingEntry != null) lastEditingEntry = editingEntry
+
+            // Derive a screen key for animated transitions
+            val screenKey = when {
+                editingEntry != null -> "edit"
+                selectedEntry != null -> "detail"
+                showProfile -> "profile"
+                showSettings -> "settings"
+                else -> "vault"
+            }
+
+            // Screen depth for determining slide direction
+            val screenDepth = mapOf(
+                "vault" to 0, "profile" to 1, "settings" to 1,
+                "detail" to 2, "edit" to 3
+            )
+
+            AnimatedContent(
+                targetState = screenKey,
+                transitionSpec = {
+                    val fromDepth = screenDepth[initialState] ?: 0
+                    val toDepth = screenDepth[targetState] ?: 0
+                    val slideOffset = { width: Int -> width / 4 }
+                    if (toDepth >= fromDepth) {
+                        (slideInHorizontally(initialOffsetX = slideOffset) + fadeIn()) togetherWith
+                            (slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut())
+                    } else {
+                        (slideInHorizontally(initialOffsetX = { -it / 4 }) + fadeIn()) togetherWith
+                            (slideOutHorizontally(targetOffsetX = slideOffset) + fadeOut())
+                    }
+                },
+                label = "screenTransition"
+            ) { targetScreen ->
+                when (targetScreen) {
+                    "edit" -> {
+                        val entry = editingEntry ?: lastEditingEntry ?: return@AnimatedContent
+                        PasswordEditScreen(
+                            entry = entry,
+                            settingsState = settingsState,
+                            onCancel = {
+                                editingEntry = null
+                            },
+                            onDelete = { id ->
+                                viewModel.deletePassword(id)
+                                editingEntry = null
+                                selectedEntry = null
+                            },
+                            onToggleFavorite = {
+                                val current = editingEntry ?: return@PasswordEditScreen
+                                viewModel.toggleFavorite(current.id)
+                                editingEntry = current.copy(isFavorite = !current.isFavorite)
+                                selectedEntry = current.copy(isFavorite = !current.isFavorite)
+                            },
+                            onSave = { id, name, username, password, website, comments,
+                                       isFavorite, isSubscription, planType, price,
+                                       subscriptionEmail, startDate, reminderEnabled ->
+                                viewModel.resetAutoLockTimer()
+                                if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                                viewModel.updatePassword(
+                                    id, name, username, password, website, comments,
+                                    isFavorite, isSubscription, planType, price,
+                                    subscriptionEmail, startDate, reminderEnabled
+                                )
+                                val updated = entry.copy(
+                                    name = name,
+                                    username = username,
+                                    password = password,
+                                    website = website,
+                                    comments = comments,
+                                    isFavorite = isFavorite,
+                                    isSubscription = isSubscription,
+                                    planType = planType,
+                                    price = price,
+                                    subscriptionEmail = subscriptionEmail,
+                                    startDate = startDate,
+                                    reminderEnabled = reminderEnabled
+                                )
+                                selectedEntry = updated
+                                editingEntry = null
+                            }
                         )
-                        val updated = editingEntry!!.copy(
-                            name = name,
-                            username = username,
-                            password = password,
-                            website = website,
-                            comments = comments,
-                            isFavorite = isFavorite,
-                            isSubscription = isSubscription,
-                            planType = planType,
-                            price = price,
-                            subscriptionEmail = subscriptionEmail,
-                            startDate = startDate,
-                            reminderEnabled = reminderEnabled
+                    }
+                    "detail" -> {
+                        val entry = selectedEntry ?: lastSelectedEntry ?: return@AnimatedContent
+                        PasswordDetailScreen(
+                            entry = entry,
+                            settingsState = settingsState,
+                            onDismiss = { selectedEntry = null },
+                            onEditClick = { editingEntry = selectedEntry },
+                            onDelete = { id ->
+                                viewModel.deletePassword(id)
+                                selectedEntry = null
+                            },
+                            onCopyToClipboard = copyToClipboard,
+                            onToggleFavorite = {
+                                val current = selectedEntry ?: return@PasswordDetailScreen
+                                viewModel.toggleFavorite(current.id)
+                                selectedEntry = current.copy(isFavorite = !current.isFavorite)
+                            },
+                            onToggleReminder = {
+                                val current = selectedEntry ?: return@PasswordDetailScreen
+                                if (!current.reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                                viewModel.toggleReminder(current.id)
+                                selectedEntry = current.copy(reminderEnabled = !current.reminderEnabled)
+                            }
                         )
-                        selectedEntry = updated
-                        editingEntry = null
                     }
-                )
-            } else if (selectedEntry != null) {
-                PasswordDetailScreen(
-                    entry = selectedEntry!!,
-                    settingsState = settingsState,
-                    onDismiss = { selectedEntry = null },
-                    onEditClick = { editingEntry = selectedEntry },
-                    onDelete = { id ->
-                        viewModel.deletePassword(id)
-                        selectedEntry = null
-                    },
-                    onCopyToClipboard = copyToClipboard,
-                    onToggleFavorite = {
-                        viewModel.toggleFavorite(selectedEntry!!.id)
-                        selectedEntry = selectedEntry!!.copy(isFavorite = !selectedEntry!!.isFavorite)
-                    },
-                    onToggleReminder = {
-                        if (!selectedEntry!!.reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        viewModel.toggleReminder(selectedEntry!!.id)
-                        selectedEntry = selectedEntry!!.copy(reminderEnabled = !selectedEntry!!.reminderEnabled)
-                    }
-                )
-            } else if (showProfile) {
-                viewModel.resetAutoLockTimer()
-                UserProfileScreen(
-                    username = state.username,
-                    email = state.email,
-                    encryptionType = state.encryptionType,
-                    lastUpdatedAt = state.lastUpdatedAt,
-                    settingsState = settingsState,
-                    onBackClick = { showProfile = false },
-                    onLockClick = { viewModel.lockVault() },
-                    onDownloadClick = launchDownload,
-                    onSettingsClick = {
-                        showProfile = false
-                        showSettings = true
-                    }
-                )
-            } else if (showSettings) {
-                viewModel.resetAutoLockTimer()
-                SettingsScreen(
-                    settingsState = settingsState,
-                    onThemeModeChange = { viewModel.setThemeMode(it) },
-                    onAccentColorChange = { viewModel.setAccentColor(it) },
-                    onHapticsToggle = { viewModel.setHapticsEnabled(it) },
-                    onFontScaleChange = { viewModel.setFontScale(it) },
-                    onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
-                    onBackClick = { showSettings = false },
-                    onLockClick = { viewModel.lockVault() },
-                    onDownloadClick = launchDownload,
-                    onProfileClick = {
-                        showSettings = false
-                        showProfile = true
-                    }
-                )
-            } else {
-                VaultScreen(
-                    vaultName = state.vaultName,
-                    passwordEntries = state.entries,
-                    settingsState = settingsState,
-                    isLoading = state.isLoading,
-                    lastUpdatedAt = state.lastUpdatedAt,
-                    onAddPasswordClick = {
+                    "profile" -> {
                         viewModel.resetAutoLockTimer()
-                        showAddSheet = true
-                    },
-                    onBackClick = { viewModel.lockVault() },
-                    onDownloadClick = launchDownload,
-                    onProfileClick = {
-                        showProfile = true
-                    },
-                    onSettingsClick = { showSettings = true },
-                    onEntryClick = { entry ->
-                        viewModel.resetAutoLockTimer()
-                        selectedEntry = entry
-                    },
-                    onCopyPassword = { entry ->
-                        copyToClipboard(entry.password)
-                    },
-                    onEditEntry = { entry ->
-                        viewModel.resetAutoLockTimer()
-                        selectedEntry = entry
-                        editingEntry = entry
-                    },
-                    onToggleFavorite = { entry ->
-                        viewModel.resetAutoLockTimer()
-                        viewModel.toggleFavorite(entry.id)
+                        UserProfileScreen(
+                            username = state.username,
+                            email = state.email,
+                            encryptionType = state.encryptionType,
+                            lastUpdatedAt = state.lastUpdatedAt,
+                            settingsState = settingsState,
+                            onBackClick = { showProfile = false },
+                            onLockClick = { viewModel.lockVault() },
+                            onDownloadClick = launchDownload,
+                            onSettingsClick = {
+                                showProfile = false
+                                showSettings = true
+                            }
+                        )
                     }
-                )
+                    "settings" -> {
+                        viewModel.resetAutoLockTimer()
+                        SettingsScreen(
+                            settingsState = settingsState,
+                            onThemeModeChange = { viewModel.setThemeMode(it) },
+                            onAccentColorChange = { viewModel.setAccentColor(it) },
+                            onHapticsToggle = { viewModel.setHapticsEnabled(it) },
+                            onFontScaleChange = { viewModel.setFontScale(it) },
+                            onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
+                            onBackClick = { showSettings = false },
+                            onLockClick = { viewModel.lockVault() },
+                            onDownloadClick = launchDownload,
+                            onProfileClick = {
+                                showSettings = false
+                                showProfile = true
+                            }
+                        )
+                    }
+                    else -> {
+                        VaultScreen(
+                            vaultName = state.vaultName,
+                            passwordEntries = state.entries,
+                            settingsState = settingsState,
+                            isLoading = state.isLoading,
+                            lastUpdatedAt = state.lastUpdatedAt,
+                            onAddPasswordClick = {
+                                viewModel.resetAutoLockTimer()
+                                showAddSheet = true
+                            },
+                            onBackClick = { viewModel.lockVault() },
+                            onDownloadClick = launchDownload,
+                            onProfileClick = {
+                                showProfile = true
+                            },
+                            onSettingsClick = { showSettings = true },
+                            onEntryClick = { entry ->
+                                viewModel.resetAutoLockTimer()
+                                selectedEntry = entry
+                            },
+                            onCopyPassword = { entry ->
+                                copyToClipboard(entry.password)
+                            },
+                            onEditEntry = { entry ->
+                                viewModel.resetAutoLockTimer()
+                                selectedEntry = entry
+                                editingEntry = entry
+                            },
+                            onToggleFavorite = { entry ->
+                                viewModel.resetAutoLockTimer()
+                                viewModel.toggleFavorite(entry.id)
+                            }
+                        )
+                    }
+                }
             }
 
             if (showAddSheet) {
