@@ -2,6 +2,7 @@ package com.lonley.dev.vault.repository
 
 import com.lonley.dev.vault.crypto.VaultCrypto
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.util.VaultLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -79,6 +80,13 @@ class VaultRepository(private val filesDir: File) {
                 put("website", entry.website ?: JSONObject.NULL)
                 put("comments", entry.comments ?: JSONObject.NULL)
                 put("createdAt", entry.createdAt)
+                put("isFavorite", entry.isFavorite)
+                put("isSubscription", entry.isSubscription)
+                put("planType", entry.planType?.name ?: JSONObject.NULL)
+                put("price", entry.price ?: JSONObject.NULL)
+                put("subscriptionEmail", entry.subscriptionEmail ?: JSONObject.NULL)
+                put("startDate", entry.startDate ?: JSONObject.NULL)
+                put("reminderEnabled", entry.reminderEnabled)
             })
         }
         metadata.put("passwords", passwordsArray)
@@ -120,7 +128,16 @@ class VaultRepository(private val filesDir: File) {
                 password = obj.getString("password"),
                 website = if (obj.isNull("website")) null else obj.optString("website"),
                 comments = if (obj.isNull("comments")) null else obj.optString("comments"),
-                createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                isFavorite = obj.optBoolean("isFavorite", false),
+                isSubscription = obj.optBoolean("isSubscription", false),
+                planType = obj.optString("planType", "").let { name ->
+                    PlanType.entries.firstOrNull { it.name == name }
+                },
+                price = if (obj.isNull("price")) null else obj.optString("price"),
+                subscriptionEmail = if (obj.isNull("subscriptionEmail")) null else obj.optString("subscriptionEmail"),
+                startDate = if (obj.isNull("startDate")) null else obj.optLong("startDate", 0L).takeIf { it > 0 },
+                reminderEnabled = obj.optBoolean("reminderEnabled", false)
             )
         }
     }

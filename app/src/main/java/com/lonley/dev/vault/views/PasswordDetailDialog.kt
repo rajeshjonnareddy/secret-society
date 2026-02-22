@@ -1,5 +1,6 @@
 package com.lonley.dev.vault.views
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,24 +21,39 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +75,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.SettingsState
+import com.lonley.dev.vault.model.nextRenewalDate
 import com.lonley.dev.vault.util.HapticHelper
 
 private fun formatTimestamp(epochMs: Long): String {
@@ -122,7 +140,9 @@ fun PasswordDetailScreen(
     onDismiss: () -> Unit,
     onEditClick: () -> Unit,
     onDelete: (id: String) -> Unit,
-    onCopyToClipboard: (String) -> Unit
+    onCopyToClipboard: (String) -> Unit,
+    onToggleFavorite: () -> Unit = {},
+    onToggleReminder: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
     var passwordVisible by remember { mutableStateOf(false) }
@@ -136,7 +156,7 @@ fun PasswordDetailScreen(
         ) {
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Header row: entry name + delete icon ──
+            // Header row: entry name + favorite star + delete icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -148,6 +168,18 @@ fun PasswordDetailScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(
+                    onClick = {
+                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                        onToggleFavorite()
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        contentDescription = if (entry.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (entry.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 IconButton(
                     onClick = {
                         HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
@@ -163,7 +195,7 @@ fun PasswordDetailScreen(
             }
 
             Text(
-                text = "Your saved credential.",
+                text = if (entry.isSubscription) "Your subscription." else "Your saved credential.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -175,7 +207,7 @@ fun PasswordDetailScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Scrollable content ──
+            // Scrollable content
             val scrollState = rememberScrollState()
 
             LaunchedEffect(settingsState.hapticsEnabled, settingsState.scrollVibrations) {
@@ -299,6 +331,130 @@ fun PasswordDetailScreen(
                                 value = entry.comments
                             )
                         }
+
+                        // Subscription details (conditional)
+                        if (entry.isSubscription) {
+                            if (entry.planType != null) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Repeat,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Plan Type",
+                                    value = entry.planType.label
+                                )
+                            }
+
+                            if (!entry.price.isNullOrBlank()) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.AttachMoney,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Price",
+                                    value = entry.price
+                                )
+                            }
+
+                            if (!entry.subscriptionEmail.isNullOrBlank()) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Email,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Subscription Email",
+                                    value = entry.subscriptionEmail
+                                )
+                            }
+
+                            if (entry.startDate != null) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.CalendarToday,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Start Date",
+                                    value = formatTimestamp(entry.startDate)
+                                )
+                            }
+
+                            val nextRenewal = entry.nextRenewalDate()
+                            if (nextRenewal != null) {
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = dividerColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Event,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    label = "Next Renewal",
+                                    value = formatTimestamp(nextRenewal)
+                                )
+                            }
+
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = dividerColor,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Notifications,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Renewal Reminder",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (entry.reminderEnabled) "Enabled" else "Disabled",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Switch(
+                                    checked = entry.reminderEnabled,
+                                    onCheckedChange = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onToggleReminder()
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -307,7 +463,7 @@ fun PasswordDetailScreen(
             }
         }
 
-        // ── Fixed bottom buttons: Cancel + Edit side by side ──
+        // Fixed bottom buttons: Cancel + Edit side by side
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -391,12 +547,19 @@ fun PasswordDetailScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PasswordEditScreen(
     entry: PasswordEntry,
     settingsState: SettingsState = SettingsState(),
     onCancel: () -> Unit,
-    onSave: (id: String, name: String, username: String, password: String, website: String?, comments: String?) -> Unit
+    onSave: (
+        id: String, name: String, username: String, password: String,
+        website: String?, comments: String?,
+        isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
+        price: String?, subscriptionEmail: String?, startDate: Long?,
+        reminderEnabled: Boolean
+    ) -> Unit
 ) {
     val hapticView = LocalView.current
     var passwordVisible by remember { mutableStateOf(false) }
@@ -406,6 +569,16 @@ fun PasswordEditScreen(
     var password by remember(entry) { mutableStateOf(entry.password) }
     var website by remember(entry) { mutableStateOf(entry.website ?: "") }
     var comments by remember(entry) { mutableStateOf(entry.comments ?: "") }
+
+    // Subscription fields
+    var isFavorite by remember(entry) { mutableStateOf(entry.isFavorite) }
+    var isSubscription by remember(entry) { mutableStateOf(entry.isSubscription) }
+    var selectedPlanType by remember(entry) { mutableStateOf(entry.planType) }
+    var price by remember(entry) { mutableStateOf(entry.price ?: "") }
+    var subscriptionEmail by remember(entry) { mutableStateOf(entry.subscriptionEmail ?: "") }
+    var startDate by remember(entry) { mutableStateOf(entry.startDate) }
+    var reminderEnabled by remember(entry) { mutableStateOf(entry.reminderEnabled) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     var nameDirty by remember { mutableStateOf(false) }
     var usernameDirty by remember { mutableStateOf(false) }
@@ -421,7 +594,7 @@ fun PasswordEditScreen(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ── Header ──
+        // Header
         Text(
             text = "Edit entry",
             style = MaterialTheme.typography.displayLarge,
@@ -429,14 +602,14 @@ fun PasswordEditScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Modify your saved credential.",
+            text = if (isSubscription) "Modify your subscription." else "Modify your saved credential.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── Scrollable form ──
+        // Scrollable form
         val scrollState = rememberScrollState()
 
         LaunchedEffect(settingsState.hapticsEnabled, settingsState.scrollVibrations) {
@@ -568,10 +741,165 @@ fun PasswordEditScreen(
                 shape = fieldShape
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Subscription toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Subscriptions,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Subscription",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Switch(
+                    checked = isSubscription,
+                    onCheckedChange = {
+                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                        isSubscription = it
+                    }
+                )
+            }
+
+            AnimatedVisibility(visible = isSubscription) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Plan type chips
+                    Text(
+                        text = "Plan Type",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PlanType.entries.forEach { plan ->
+                            FilterChip(
+                                selected = selectedPlanType == plan,
+                                onClick = {
+                                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                    selectedPlanType = plan
+                                },
+                                label = { Text(plan.label) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = { Text("Price (Optional)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.AttachMoney,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = subscriptionEmail,
+                        onValueChange = { subscriptionEmail = it },
+                        label = { Text("Subscription Email (Optional)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Email,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Start date
+                    val dateText = if (startDate != null) {
+                        val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+                        sdf.format(java.util.Date(startDate!!))
+                    } else "Select Start Date"
+
+                    OutlinedTextField(
+                        value = dateText,
+                        onValueChange = {},
+                        label = { Text("Start Date") },
+                        readOnly = true,
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { if (it.isFocused) showDatePicker = true },
+                        shape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Reminder toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Remind before renewal",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Switch(
+                            checked = reminderEnabled,
+                            onCheckedChange = {
+                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                reminderEnabled = it
+                            }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // ── Fixed bottom buttons ──
+        // Fixed bottom buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -597,7 +925,13 @@ fun PasswordEditScreen(
             Button(
                 onClick = {
                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                    onSave(entry.id, name, username, password, website.ifBlank { null }, comments.ifBlank { null })
+                    onSave(
+                        entry.id, name, username, password,
+                        website.ifBlank { null }, comments.ifBlank { null },
+                        isFavorite, isSubscription, selectedPlanType,
+                        price.ifBlank { null }, subscriptionEmail.ifBlank { null },
+                        startDate, reminderEnabled
+                    )
                 },
                 enabled = isFormValid,
                 modifier = Modifier
@@ -611,6 +945,31 @@ fun PasswordEditScreen(
                     fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+    }
+
+    // Date picker dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    startDate = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

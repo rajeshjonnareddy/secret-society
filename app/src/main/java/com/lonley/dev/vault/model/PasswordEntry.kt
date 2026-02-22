@@ -7,5 +7,12 @@ data class PasswordEntry(
     val password: String,
     val website: String? = null,
     val comments: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val isFavorite: Boolean = false,
+    val isSubscription: Boolean = false,
+    val planType: PlanType? = null,
+    val price: String? = null,
+    val subscriptionEmail: String? = null,
+    val startDate: Long? = null,
+    val reminderEnabled: Boolean = false
 )

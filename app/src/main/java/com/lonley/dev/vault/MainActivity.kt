@@ -16,23 +16,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.lonley.dev.vault.data.SettingsPreferences
+import com.lonley.dev.vault.notification.RenewalCheckWorker
+import com.lonley.dev.vault.notification.VaultNotificationHelper
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.VaultLogger
 import com.lonley.dev.vault.viewmodel.VaultViewModel
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 //        VaultLogger.init(applicationContext)
         VaultLogger.i("App", "MainActivity created")
+
+        // Notification channel + WorkManager scheduling
+        VaultNotificationHelper.createChannel(applicationContext)
+        val renewalCheckRequest = PeriodicWorkRequestBuilder<RenewalCheckWorker>(
+            1, TimeUnit.DAYS
+        ).build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "renewal_check",
+            ExistingPeriodicWorkPolicy.KEEP,
+            renewalCheckRequest
+        )
+
         enableEdgeToEdge()
         setContent {
             val prefs = getSharedPreferences("vault_security", Context.MODE_PRIVATE)
             val settingsPrefs = getSharedPreferences("vault_settings", Context.MODE_PRIVATE)
+            val reminderPrefs = getSharedPreferences("vault_reminders", Context.MODE_PRIVATE)
             val settingsPreferences = SettingsPreferences(settingsPrefs)
             val viewModel: VaultViewModel = viewModel(
-                factory = VaultViewModel.Factory(filesDir, prefs, settingsPreferences)
+                factory = VaultViewModel.Factory(filesDir, prefs, settingsPreferences, reminderPrefs)
             )
             DisposableEffect(viewModel) {
                 val lifecycle = ProcessLifecycleOwner.get().lifecycle

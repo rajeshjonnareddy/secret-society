@@ -9,7 +9,8 @@ enum class AccentColor {
 enum class FontScale(val factor: Float) {
     Small(0.85f),
     Default(1.0f),
-    Large(1.2f)
+    Large(1.2f),
+    ExtraLarge(1.4f)
 }
 
 data class SettingsState(

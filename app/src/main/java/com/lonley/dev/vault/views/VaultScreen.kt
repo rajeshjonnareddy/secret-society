@@ -1,6 +1,7 @@
 package com.lonley.dev.vault.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -34,14 +36,20 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Downloading
+import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.VideocamOff
 import androidx.compose.material.icons.outlined.FrontHand
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -116,7 +124,7 @@ private fun SearchGlassBar(
             .height(56.dp)
             .clip(shape)
             .background(glass.background)
-            .border(1.dp, glass.border, shape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
             .padding(horizontal = 16.dp)
     ) {
         Row(
@@ -254,7 +262,8 @@ private fun PasswordEntryItem(
     entry: PasswordEntry,
     onClick: () -> Unit = {},
     onCopyClick: () -> Unit = {},
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onFavoriteClick: () -> Unit = {}
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
@@ -308,51 +317,70 @@ private fun PasswordEntryItem(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Initial letter overlaid on gradient band
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = entry.name.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryColor
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
                     // Text content
-                    Column(modifier = Modifier.weight(1f)) {
-                        // Primary zone: name + username
-                        Text(
-                            text = entry.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "@${entry.username}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Primary zone: name + username with subscription info
+                        Column {
+                            Text(
+                                text = entry.name.replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "@${entry.username}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (entry.isSubscription && (!entry.price.isNullOrBlank() || entry.planType != null)) {
+                                    Column(
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        if (!entry.price.isNullOrBlank()) {
+                                            Text(
+                                                text = "$${entry.price}",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        if (entry.planType != null) {
+                                            Text(
+                                                text = entry.planType.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                        // Subtle divider
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(0.5.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        // Subtle divider + Secondary info row (pinned to bottom)
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(0.5.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
 
                         // Secondary info row
                         Row(
@@ -395,6 +423,7 @@ private fun PasswordEntryItem(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
                         }
+                        } // end bottom-pinned Column
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -404,6 +433,17 @@ private fun PasswordEntryItem(
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        IconButton(
+                            onClick = onFavoriteClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = if (entry.isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (entry.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onCopyClick,
                             modifier = Modifier.size(36.dp)
@@ -437,6 +477,7 @@ private fun PasswordEntryItem(
 
 @Composable
 private fun DashboardStatsRow(
+    passwordEntries: List<PasswordEntry>,
     totalPasswords: Int,
     lastUpdatedAt: Long
 ) {
@@ -457,13 +498,18 @@ private fun DashboardStatsRow(
         }
     }
 
-    data class StatCard(val icon: androidx.compose.ui.graphics.vector.ImageVector, val value: String, val label: String)
+    data class StatCard(
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val value: String,
+        val label: String,
+        val isCount: Boolean = false
+    )
 
     val stats = listOf(
-        StatCard(Icons.Outlined.Lock, totalPasswords.toString(), "Passwords"),
-        StatCard(Icons.Outlined.Download, relativeTime, "Last Updated"),
-        StatCard(Icons.Outlined.Settings, "4", "Categories"),
-        StatCard(Icons.Outlined.Person, "0", "Favorites")
+        StatCard(Icons.Outlined.Password, totalPasswords.toString(), "Passwords", isCount = true),
+        StatCard(Icons.Outlined.Subscriptions, passwordEntries.count { it.isSubscription }.toString(), "Subscriptions", isCount = true),
+        StatCard(Icons.Outlined.Favorite, passwordEntries.count { it.isFavorite }.toString(), "Favorites", isCount = true),
+        StatCard(Icons.Outlined.LocalActivity, relativeTime, "Last Updated")
     )
 
     LazyRow(
@@ -472,29 +518,85 @@ private fun DashboardStatsRow(
         items(stats.size) { index ->
             val stat = stats[index]
             GlassCard(
-                modifier = Modifier.width(150.dp),
+                modifier = Modifier
+                    .width(if (stat.isCount) 120.dp else 100.dp)
+                    .height(90.dp),
                 contentPadding = PaddingValues(14.dp)
             ) {
-                Column {
-                    Icon(
-                        imageVector = stat.icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stat.value,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stat.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                if (stat.isCount) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxHeight(),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Icon(
+                                imageVector = stat.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stat.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .widthIn(min = 36.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stat.value,
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                } else {
+                    Column {
+                        Icon(
+                            imageVector = stat.icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stat.value,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    initialDelayMillis = 1000,
+                                    repeatDelayMillis = 2000
+                                )
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stat.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    initialDelayMillis = 500,
+                                    repeatDelayMillis = 2500
+                                )
+                        )
+                    }
                 }
             }
         }
@@ -517,7 +619,8 @@ fun VaultScreen(
     onSettingsClick: () -> Unit = {},
     onEntryClick: (PasswordEntry) -> Unit = {},
     onCopyPassword: (PasswordEntry) -> Unit = {},
-    onEditEntry: (PasswordEntry) -> Unit = {}
+    onEditEntry: (PasswordEntry) -> Unit = {},
+    onToggleFavorite: (PasswordEntry) -> Unit = {}
 ) {
     val view = LocalView.current
     val listState = rememberLazyListState()
@@ -531,7 +634,7 @@ fun VaultScreen(
         }
     }
 
-    val filterOptions = listOf("All", "Websites", "Apps", "Social", "Other")
+    val filterOptions = listOf("All", "Favorites", "Subscriptions", "Websites", "Apps", "Social", "Other")
     var selectedFilter by remember { mutableStateOf(filterOptions.first()) }
 
     val filteredEntries = passwordEntries.filter { entry ->
@@ -539,11 +642,13 @@ fun VaultScreen(
                 entry.name.contains(searchQuery, ignoreCase = true) ||
                 entry.username.contains(searchQuery, ignoreCase = true)
         val matchesFilter = selectedFilter == "All" || when (selectedFilter) {
+            "Favorites" -> entry.isFavorite
+            "Subscriptions" -> entry.isSubscription
             "Websites" -> !entry.website.isNullOrBlank()
             else -> true
         }
         matchesSearch && matchesFilter
-    }
+    }.sortedBy { it.name.lowercase() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -610,6 +715,7 @@ fun VaultScreen(
 
             // ── Dashboard stats ──
             DashboardStatsRow(
+                passwordEntries = passwordEntries,
                 totalPasswords = passwordEntries.size,
                 lastUpdatedAt = lastUpdatedAt
             )
@@ -686,6 +792,10 @@ fun VaultScreen(
                             onEditClick = {
                                 HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
                                 onEditEntry(entry)
+                            },
+                            onFavoriteClick = {
+                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                onToggleFavorite(entry)
                             }
                         )
                     }

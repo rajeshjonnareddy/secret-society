@@ -9,9 +9,11 @@ import com.lonley.dev.vault.data.SettingsPreferences
 import com.lonley.dev.vault.model.AccentColor
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.VaultUiState
+import com.lonley.dev.vault.model.nextRenewalDate
 import com.lonley.dev.vault.repository.VaultRepository
 import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.VaultLogger
@@ -32,7 +34,8 @@ import java.util.UUID
 class VaultViewModel(
     private val repository: VaultRepository,
     private val prefs: SharedPreferences,
-    private val settingsPreferences: SettingsPreferences
+    private val settingsPreferences: SettingsPreferences,
+    private val reminderPrefs: SharedPreferences
 ) : ViewModel(), DefaultLifecycleObserver {
 
     private var wasBackgrounded = false
@@ -350,14 +353,34 @@ class VaultViewModel(
         }
     }
 
-    fun addPassword(name: String, username: String, password: String, website: String?, comments: String? = null) {
+    fun addPassword(
+        name: String,
+        username: String,
+        password: String,
+        website: String?,
+        comments: String? = null,
+        isFavorite: Boolean = false,
+        isSubscription: Boolean = false,
+        planType: PlanType? = null,
+        price: String? = null,
+        subscriptionEmail: String? = null,
+        startDate: Long? = null,
+        reminderEnabled: Boolean = false
+    ) {
         val entry = PasswordEntry(
             id = UUID.randomUUID().toString(),
             name = name,
             username = username,
             password = password,
             website = website,
-            comments = comments
+            comments = comments,
+            isFavorite = isFavorite,
+            isSubscription = isSubscription,
+            planType = planType,
+            price = price,
+            subscriptionEmail = subscriptionEmail,
+            startDate = startDate,
+            reminderEnabled = reminderEnabled
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
@@ -369,9 +392,24 @@ class VaultViewModel(
         }
 
         saveVaultAsync()
+        syncReminders()
     }
 
-    fun updatePassword(id: String, name: String, username: String, password: String, website: String?, comments: String? = null) {
+    fun updatePassword(
+        id: String,
+        name: String,
+        username: String,
+        password: String,
+        website: String?,
+        comments: String? = null,
+        isFavorite: Boolean = false,
+        isSubscription: Boolean = false,
+        planType: PlanType? = null,
+        price: String? = null,
+        subscriptionEmail: String? = null,
+        startDate: Long? = null,
+        reminderEnabled: Boolean = false
+    ) {
         val index = entries.indexOfFirst { it.id == id }
         if (index == -1) return
         VaultLogger.i("ViewModel", "Updating password entry: name=$name, id=$id")
@@ -380,7 +418,14 @@ class VaultViewModel(
             username = username,
             password = password,
             website = website,
-            comments = comments
+            comments = comments,
+            isFavorite = isFavorite,
+            isSubscription = isSubscription,
+            planType = planType,
+            price = price,
+            subscriptionEmail = subscriptionEmail,
+            startDate = startDate,
+            reminderEnabled = reminderEnabled
         )
         lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value
@@ -388,6 +433,45 @@ class VaultViewModel(
             _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
         }
         saveVaultAsync()
+        syncReminders()
+    }
+
+    fun toggleFavorite(id: String) {
+        val index = entries.indexOfFirst { it.id == id }
+        if (index == -1) return
+        entries[index] = entries[index].copy(isFavorite = !entries[index].isFavorite)
+        lastUpdatedAt = System.currentTimeMillis()
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked) {
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
+        }
+        saveVaultAsync()
+    }
+
+    fun toggleReminder(id: String) {
+        val index = entries.indexOfFirst { it.id == id }
+        if (index == -1) return
+        entries[index] = entries[index].copy(reminderEnabled = !entries[index].reminderEnabled)
+        lastUpdatedAt = System.currentTimeMillis()
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked) {
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
+        }
+        saveVaultAsync()
+        syncReminders()
+    }
+
+    private fun syncReminders() {
+        val editor = reminderPrefs.edit()
+        editor.clear()
+        for (entry in entries) {
+            if (entry.isSubscription && entry.reminderEnabled) {
+                val nextRenewal = entry.nextRenewalDate() ?: continue
+                editor.putString("${entry.id}_name", entry.name)
+                editor.putLong("${entry.id}_nextRenewal", nextRenewal)
+            }
+        }
+        editor.apply()
     }
 
     fun deletePassword(id: String) {
@@ -486,11 +570,12 @@ class VaultViewModel(
     class Factory(
         private val filesDir: File,
         private val prefs: SharedPreferences,
-        private val settingsPreferences: SettingsPreferences
+        private val settingsPreferences: SettingsPreferences,
+        private val reminderPrefs: SharedPreferences
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return VaultViewModel(VaultRepository(filesDir), prefs, settingsPreferences) as T
+            return VaultViewModel(VaultRepository(filesDir), prefs, settingsPreferences, reminderPrefs) as T
         }
     }
 }

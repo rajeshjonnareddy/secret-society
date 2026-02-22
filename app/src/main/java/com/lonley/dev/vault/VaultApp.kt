@@ -52,14 +52,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import android.provider.OpenableColumns
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
+import android.Manifest
+import android.os.Build
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
+import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.viewmodel.VaultViewModel
@@ -118,6 +122,10 @@ fun VaultApp(viewModel: VaultViewModel) {
             viewModel.noVault()
         }
     }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* Permission result - no action needed, best-effort */ }
 
     LaunchedEffect(Unit) {
         viewModel.initialize()
@@ -247,6 +255,25 @@ fun VaultApp(viewModel: VaultViewModel) {
                     }
             ) {
 
+            // Back button handling: navigate back through screen stack
+            BackHandler(enabled = editingEntry != null) {
+                editingEntry = null
+            }
+            BackHandler(enabled = editingEntry == null && selectedEntry != null) {
+                selectedEntry = null
+            }
+            BackHandler(enabled = showSettings) {
+                showSettings = false
+            }
+            BackHandler(enabled = showProfile) {
+                showProfile = false
+            }
+            BackHandler(enabled = showAddSheet) {
+                scope.launch { addSheetState.hide() }.invokeOnCompletion {
+                    if (!addSheetState.isVisible) showAddSheet = false
+                }
+            }
+
             if (editingEntry != null) {
                 PasswordEditScreen(
                     entry = editingEntry!!,
@@ -254,15 +281,31 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onCancel = {
                         editingEntry = null
                     },
-                    onSave = { id, name, username, password, website, comments ->
+                    onSave = { id, name, username, password, website, comments,
+                               isFavorite, isSubscription, planType, price,
+                               subscriptionEmail, startDate, reminderEnabled ->
                         viewModel.resetAutoLockTimer()
-                        viewModel.updatePassword(id, name, username, password, website, comments)
+                        if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        viewModel.updatePassword(
+                            id, name, username, password, website, comments,
+                            isFavorite, isSubscription, planType, price,
+                            subscriptionEmail, startDate, reminderEnabled
+                        )
                         val updated = editingEntry!!.copy(
                             name = name,
                             username = username,
                             password = password,
                             website = website,
-                            comments = comments
+                            comments = comments,
+                            isFavorite = isFavorite,
+                            isSubscription = isSubscription,
+                            planType = planType,
+                            price = price,
+                            subscriptionEmail = subscriptionEmail,
+                            startDate = startDate,
+                            reminderEnabled = reminderEnabled
                         )
                         selectedEntry = updated
                         editingEntry = null
@@ -278,7 +321,18 @@ fun VaultApp(viewModel: VaultViewModel) {
                         viewModel.deletePassword(id)
                         selectedEntry = null
                     },
-                    onCopyToClipboard = copyToClipboard
+                    onCopyToClipboard = copyToClipboard,
+                    onToggleFavorite = {
+                        viewModel.toggleFavorite(selectedEntry!!.id)
+                        selectedEntry = selectedEntry!!.copy(isFavorite = !selectedEntry!!.isFavorite)
+                    },
+                    onToggleReminder = {
+                        if (!selectedEntry!!.reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        viewModel.toggleReminder(selectedEntry!!.id)
+                        selectedEntry = selectedEntry!!.copy(reminderEnabled = !selectedEntry!!.reminderEnabled)
+                    }
                 )
             } else if (showProfile) {
                 viewModel.resetAutoLockTimer()
@@ -341,6 +395,10 @@ fun VaultApp(viewModel: VaultViewModel) {
                         viewModel.resetAutoLockTimer()
                         selectedEntry = entry
                         editingEntry = entry
+                    },
+                    onToggleFavorite = { entry ->
+                        viewModel.resetAutoLockTimer()
+                        viewModel.toggleFavorite(entry.id)
                     }
                 )
             }
@@ -351,14 +409,25 @@ fun VaultApp(viewModel: VaultViewModel) {
                     sheetState = addSheetState
                 ) {
                     AddPasswordContent(
-                        onConfirm = { name, username, password, website, comments ->
+                        onConfirm = { name, username, password, website, comments,
+                                      isSubscription, planType, price, subscriptionEmail,
+                                      startDate, reminderEnabled ->
                             viewModel.resetAutoLockTimer()
+                            if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
                             viewModel.addPassword(
                                 name = name,
                                 username = username,
                                 password = password,
                                 website = website.ifBlank { null },
-                                comments = comments.ifBlank { null }
+                                comments = comments.ifBlank { null },
+                                isSubscription = isSubscription,
+                                planType = planType,
+                                price = price,
+                                subscriptionEmail = subscriptionEmail,
+                                startDate = startDate,
+                                reminderEnabled = reminderEnabled
                             )
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false
