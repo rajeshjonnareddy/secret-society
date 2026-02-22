@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.util.HapticHelper
+import com.lonley.dev.vault.util.formatRelativeTime
 import androidx.compose.ui.platform.LocalView
 
 @Composable
@@ -60,22 +61,7 @@ fun UserProfileScreen(
 ) {
     val view = LocalView.current
 
-    val lastUpdatedText = remember(lastUpdatedAt) {
-        if (lastUpdatedAt == 0L) "Never" else {
-            val diff = System.currentTimeMillis() - lastUpdatedAt
-            val minutes = diff / 60_000
-            val hours = minutes / 60
-            val days = hours / 24
-            when {
-                minutes < 1 -> "Just now"
-                minutes < 60 -> "${minutes}m ago"
-                hours < 24 -> "${hours}h ago"
-                days < 30 -> "${days}d ago"
-                days < 365 -> "${days / 30}mo ago"
-                else -> "${days / 365}y ago"
-            }
-        }
-    }
+    val lastUpdatedText = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(

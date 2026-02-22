@@ -1,78 +1,179 @@
-# Plan: Fix PasswordDetailDialog Theme/Accent + Sharp Button Colors
+# Plan: Material 3 Expressive Transition Animations
 
-## Root Cause Analysis
+## Context
 
-From the screenshots:
-- **Vault screen**: Yellow accent applied correctly (themed by `MainActivity`'s `VaultTheme`)
-- **Settings screen**: Yellow accent applied correctly (same parent `VaultTheme`)
-- **PasswordDetailDialog** (view + edit): Shows default purple/blue accent, flat dark background (no animated gradient blobs)
+The app uses a **state-driven navigation pattern** (not NavHost) in `VaultApp.kt`. Screen swaps happen instantly via `if/else if` chains on boolean flags (`showSettings`, `showProfile`, `selectedEntry`, `editingEntry`). There are currently **zero transition animations** between screens. Existing animations are limited to a few `AnimatedVisibility` expand/collapse sections and one `AnimatedContent` slogan rotator.
 
-The Compose `Dialog` composable creates a **separate window** with its own composition tree — it does **NOT** inherit `MaterialTheme` or `CompositionLocal` values from the parent. The `PasswordDetailDialog` wraps its content in its own `VaultTheme(themeMode, accentColor)` to compensate.
+**Compose BOM:** 2024.09.00 | **Material3:** 1.4.0 — full M3 motion APIs available.
 
-**Previous code** passed only `themeMode` (dark/light was correct) but NOT `accentColor` — so it defaulted to `AccentColor.Auto`, which resolves to default M3 purple on older devices or wallpaper-based dynamic colors on Android 12+.
+**Goal:** Add M3-expressive transitions for screen changes, card appearances, and form reveals — without touching any functionality or navigation logic.
 
-**My last round of changes** already fixed this by passing the full `settingsState` (which includes `accentColor`) to the dialog. However, **the build was assembled but likely not installed** on the device (`assembleDebug` ≠ `installDebug`).
+---
 
-## Steps
+## Strategy
 
-### 1. Install the latest build on device
-Run `gradlew.bat installDebug` to push the APK with the accent fix to the device.
+Wrap the screen-switching `if/else` chain in `VaultApp.kt` with `AnimatedContent`, using M3 expressive motion specs (emphasized easing, spring physics). Add staggered entrance animations to list items and cards. Enhance form field reveals with sequential slide-in animations.
 
-### 2. Verify PasswordDetailDialog theming
-After install, open a password entry — it should now show:
-- Yellow title text (uses `MaterialTheme.colorScheme.primary`)
-- Yellow animated gradient blobs in background
-- Yellow-toned glass cards and icon tints
-- Correct accent on all buttons
+All animations use `Modifier` additions or `AnimatedContent`/`AnimatedVisibility` wrappers — no structural changes to composables or their callback signatures.
 
-### 3. Fix "blurred/not sharp" button colors
-The screenshots show washed-out button colors. Even with the correct yellow theme, Material 3's `FilledTonalButton` uses `secondaryContainer` which is a muted dark brown (`#52472A` in yellow-dark). To make buttons crisper:
+---
 
-**File: `views/PasswordDetailDialog.kt`**
+## Part 1: Screen Transitions in VaultApp.kt
 
-| Button | Current color source | Fix |
-|--------|---------------------|-----|
-| Edit Entry (`Button`) | `primary` (#FFD54F) | Already sharp — no change needed |
-| Delete Entry (`FilledTonalButton`) | Custom error colors | Already correct — no change needed |
-| Cancel (edit mode, `FilledTonalButton`) | `secondaryContainer` (muted brown) | Override to use `surfaceVariant` so it's neutral-toned and reads as secondary |
-| Save (edit mode, `Button`) | `primary` (#FFD54F) | Already sharp — no change needed |
+### What changes
+Replace the `if/else if` chain (lines 277–404) with a single `AnimatedContent` keyed on the current "screen identity". This gives us enter/exit transitions between all unlocked screens.
 
-**File: `views/AddPasswordSheet.kt`**
+### Screen key derivation
+```kotlin
+val currentScreen = when {
+    editingEntry != null -> "edit"
+    selectedEntry != null -> "detail"
+    showProfile -> "profile"
+    showSettings -> "settings"
+    else -> "vault"
+}
+```
 
-| Button | Current color source | Fix |
-|--------|---------------------|-----|
-| Cancel (`FilledTonalButton`) | `secondaryContainer` (muted) | Same override as above |
-| Add (`Button`) | `primary` when enabled | Already sharp |
+### Transition spec
+Use M3 expressive forward/backward motion:
+- **Forward** (vault → detail, detail → edit, vault → settings/profile): `fadeIn + slideInHorizontally(from end)` paired with `fadeOut + slideOutHorizontally(to start)`
+- **Backward** (edit → detail, detail → vault, settings → vault): reverse direction
+- Duration: **400ms** with `EmphasizedDecelerateEasing` (enter) and `EmphasizedAccelerateEasing` (exit) — standard M3 expressive timing
+- Use `SizeTransform(clip = false)` to prevent clipping during transitions
 
-**File: `views/CreateVaultDrawer.kt`**
+### Screen depth ordering
+```
+vault(0) → detail(1) → edit(2)
+vault(0) → settings(1)
+vault(0) → profile(1)
+```
+Compare depths to decide forward vs backward animation direction.
 
-| Button | Current color source | Fix |
-|--------|---------------------|-----|
-| Cancel (`FilledTonalButton`) | `secondaryContainer` (muted) | Same override |
-| Create Vault (`Button`) | `primary` | Already sharp |
+### Files modified
+- `VaultApp.kt` — wrap screen block in `AnimatedContent`, add screen key derivation and transition spec
 
-**File: `views/HomeScreen.kt`**
+---
 
-| Button | Current color source | Fix |
-|--------|---------------------|-----|
-| Create New Vault (`Button`) | `primary` | Already sharp |
-| Open Existing Vault (`FilledTonalButton`) | `secondaryContainer` (muted) | Same override |
+## Part 2: Password List Item Staggered Entrance (VaultScreen.kt)
 
-The fix for FilledTonalButton: use `surfaceContainerHighest` for container and `onSurface` for content — this gives a clean, neutral secondary button that works across all accent colors.
+### What changes
+Add staggered fade+slide entrance animation to `PasswordEntryItem` cards in the `LazyColumn`.
 
-### 4. Files to modify
+### Approach
+Use `AnimatedVisibility` with `remember { MutableTransitionState(false) }` initialized to false, which auto-triggers the enter animation on first composition. Each item gets:
+- `fadeIn(tween(300, delayMillis = index * 50))`
+- `slideInVertically(tween(300, delayMillis = index * 50)) { it / 4 }`
 
-| File | Change |
-|------|--------|
-| `views/PasswordDetailDialog.kt` | Override `FilledTonalButton` colors for Cancel button |
-| `views/AddPasswordSheet.kt` | Override `FilledTonalButton` colors for Cancel button |
-| `views/CreateVaultDrawer.kt` | Override `FilledTonalButton` colors for Cancel button |
-| `views/HomeScreen.kt` | Override `FilledTonalButton` colors for Open Existing Vault button |
+Cap the stagger at index 8 so items far down the list don't have excessive delays.
 
-### 5. Verify
-- `gradlew.bat installDebug`
-- Open password detail → should show yellow accent, animated background, sharp buttons
-- Open edit mode → same
-- Open Add Password sheet → sharp Cancel/Add buttons
-- Open Create Vault sheet → sharp Cancel/Create buttons
-- Try different accent colors in Settings → all screens update consistently
+### Files modified
+- `VaultScreen.kt` — add enter animation to items in `LazyColumn`
+
+---
+
+## Part 3: Dashboard Stat Cards Staggered Entrance (VaultScreen.kt)
+
+### What changes
+Add sequential scale+fade entrance to the 4 stat cards in `DashboardStatsRow`.
+
+### Approach
+Each `GlassCard` in the `LazyRow` gets wrapped with `AnimatedVisibility` using `MutableTransitionState(false)`:
+- `fadeIn(tween(400, delayMillis = index * 80))`
+- `scaleIn(tween(400, delayMillis = index * 80), initialScale = 0.85f)`
+
+### Files modified
+- `VaultScreen.kt` — `DashboardStatsRow` composable
+
+---
+
+## Part 4: GlassCard Content Transitions (SettingsScreen)
+
+### What changes
+Add `animateContentSize()` to `GlassCard` sections that expand/collapse, so the card boundary animates smoothly when `AnimatedVisibility` children expand.
+
+### Approach
+Add `Modifier.animateContentSize(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))` to the inner `Column` of each `GlassCard` that contains expandable content in SettingsScreen (theme mode, font size, scroll vibrations sections).
+
+### Files modified
+- `SettingsScreen.kt` — add `animateContentSize` to 2 expandable GlassCard Column modifiers (Appearance card, Experience card)
+
+---
+
+## Part 5: Form Field Sequential Entrance (PasswordEditScreen, AddPasswordSheet)
+
+### What changes
+Add staggered slide-up entrance for form fields when the edit screen or add sheet first appears.
+
+### Approach
+For `PasswordEditScreen`: Each `OutlinedTextField` and section gets wrapped in an `AnimatedVisibility` with `MutableTransitionState(false)`:
+- `fadeIn(tween(300, delayMillis = fieldIndex * 60))`
+- `slideInVertically(tween(300, delayMillis = fieldIndex * 60)) { it / 3 }`
+
+Same approach for `AddPasswordContent` in `AddPasswordSheet.kt`.
+
+### Files modified
+- `PasswordDetailDialog.kt` (contains `PasswordEditScreen`) — add staggered entrance to form fields
+- `AddPasswordSheet.kt` (contains `AddPasswordContent`) — add staggered entrance to form fields
+
+---
+
+## Part 6: HomeScreen Feature Card Entrance
+
+### What changes
+Add a subtle scale+fade entrance animation to the `OutlinedCard` feature list on `HomeScreen`.
+
+### Approach
+Wrap the `OutlinedCard` in an `AnimatedVisibility` using `MutableTransitionState(false)`:
+- `fadeIn(tween(500))`
+- `slideInVertically(tween(500, easing = EmphasizedDecelerateEasing)) { it / 4 }`
+
+Also stagger the two CTA buttons at the bottom with a slight delay.
+
+### Files modified
+- `HomeScreen.kt` — add entrance animation to feature card and CTA buttons
+
+---
+
+## Files Modified Summary
+
+| File | Changes |
+|------|---------|
+| `VaultApp.kt` | Wrap screen chain in `AnimatedContent` with M3 expressive transitions |
+| `VaultScreen.kt` | Staggered entrance for password list items + dashboard stat cards |
+| `SettingsScreen.kt` | `animateContentSize` on expandable GlassCard sections |
+| `PasswordDetailDialog.kt` | Staggered form field entrance in `PasswordEditScreen` |
+| `AddPasswordSheet.kt` | Staggered form field entrance in `AddPasswordContent` |
+| `HomeScreen.kt` | Feature card + CTA button entrance animations |
+
+---
+
+## What is NOT changed
+- No navigation logic changes — all `if/else` conditions, `BackHandler`, state variables remain identical
+- No callback signatures modified
+- No new dependencies needed — all APIs available in current Compose BOM
+- No functionality affected — animations are purely visual additions
+- No changes to `GlassCard` composable itself (animations applied at call sites)
+
+---
+
+## Animation Specs Reference
+
+| Animation | Duration | Easing | Notes |
+|-----------|----------|--------|-------|
+| Screen transitions | 400ms | EmphasizedDecelerate (enter) / EmphasizedAccelerate (exit) | M3 standard |
+| List item stagger | 300ms + 50ms/item delay | EaseOut | Capped at 8 items |
+| Stat card stagger | 400ms + 80ms/card delay | EaseOut + scaleIn(0.85) | 4 cards total |
+| Card content resize | Spring(0.8, 300) | Spring physics | For expand/collapse |
+| Form field stagger | 300ms + 60ms/field delay | EaseOut | ~6 fields |
+| Feature card entrance | 500ms | EmphasizedDecelerate | Single card |
+
+---
+
+## Verification
+
+1. `gradlew.bat assembleDebug` — compiles with no errors
+2. Manual test: navigate between all screens, verify smooth transitions
+3. Verify back navigation still works correctly (BackHandler unaffected)
+4. Verify add password sheet still opens/closes properly
+5. Verify settings expand/collapse sections animate smoothly
+6. Verify no visual glitches or clipping during transitions

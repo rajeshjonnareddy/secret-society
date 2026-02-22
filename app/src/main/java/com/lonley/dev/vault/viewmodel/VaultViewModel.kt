@@ -117,7 +117,7 @@ class VaultViewModel(
                     )
                 }
             } else {
-                _suspendError.value = "Wrong password. $remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted."
+                _suspendError.value = "Wrong password.\n$remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted."
             }
         }
         return matches
@@ -309,7 +309,7 @@ class VaultViewModel(
                     )
                 } else {
                     _uiState.value = VaultUiState.Error(
-                        "Wrong password. $remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted.",
+                        "Wrong password.\n$remaining ${if (remaining == 1) "try" else "tries"} remaining before vault is deleted.",
                         VaultUiState.PromptUnlock(fileName),
                         attemptsRemaining = remaining
                     )

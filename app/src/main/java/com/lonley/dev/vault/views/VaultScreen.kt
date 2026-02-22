@@ -25,27 +25,18 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Downloading
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.VideocamOff
-import androidx.compose.material.icons.outlined.FrontHand
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
@@ -75,8 +66,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.lonley.dev.vault.ui.theme.LocalGlassColors
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -87,6 +76,7 @@ import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
+import com.lonley.dev.vault.util.formatRelativeTime
 
 // ── Reusable glass card ──
 
@@ -169,92 +159,6 @@ private fun SearchGlassBar(
     }
 }
 
-@Composable
-fun SearchInputGlassCard(
-    modifier: Modifier = Modifier
-) {
-    var searchQuery by remember { mutableStateOf("") }
-    val roundedShape = RoundedCornerShape(16.dp)
-    val glass = LocalGlassColors.current
-
-    Box(
-        modifier = modifier
-            .height(50.dp)
-            .clip(roundedShape)
-            .background(glass.background)
-            .border(1.dp, glass.border, roundedShape)
-            .padding(horizontal = 16.dp, vertical = 0.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search Icon",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { newValue ->
-                    searchQuery = newValue
-                },
-                placeholder = {
-                    Text(
-                        text = "Search for a disease...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                    errorIndicatorColor = Color.Transparent,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(0.dp),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground
-                ),
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Search,
-                    keyboardType = KeyboardType.Text
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-
-                    }
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = {
-
-                },
-                enabled = searchQuery.isNotBlank()
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Submit Search",
-                    tint = if (searchQuery.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                )
-            }
-        }
-    }
-}
-
 // ── Password entry card using glass style ──
 
 @Composable
@@ -272,20 +176,7 @@ private fun PasswordEntryItem(
         listOf(primaryColor.copy(alpha = 0.15f), tertiaryColor.copy(alpha = 0.05f), Color.Transparent)
     )
 
-    val relativeTime = remember(entry.createdAt) {
-        val diff = System.currentTimeMillis() - entry.createdAt
-        val minutes = diff / 60_000
-        val hours = minutes / 60
-        val days = hours / 24
-        when {
-            minutes < 1 -> "now"
-            minutes < 60 -> "${minutes}m ago"
-            hours < 24 -> "${hours}h ago"
-            days < 30 -> "${days}d ago"
-            days < 365 -> "${days / 30}mo ago"
-            else -> "${days / 365}y ago"
-        }
-    }
+    val relativeTime = remember(entry.createdAt) { formatRelativeTime(entry.createdAt, justNowText = "now") }
 
     GlassCard(
         modifier = Modifier
@@ -481,22 +372,7 @@ private fun DashboardStatsRow(
     totalPasswords: Int,
     lastUpdatedAt: Long
 ) {
-    val relativeTime = remember(lastUpdatedAt) {
-        if (lastUpdatedAt == 0L) "Never" else {
-            val diff = System.currentTimeMillis() - lastUpdatedAt
-            val minutes = diff / 60_000
-            val hours = minutes / 60
-            val days = hours / 24
-            when {
-                minutes < 1 -> "Just now"
-                minutes < 60 -> "${minutes}m ago"
-                hours < 24 -> "${hours}h ago"
-                days < 30 -> "${days}d ago"
-                days < 365 -> "${days / 30}mo ago"
-                else -> "${days / 365}y ago"
-            }
-        }
-    }
+    val relativeTime = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
 
     data class StatCard(
         val icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -560,17 +436,19 @@ private fun DashboardStatsRow(
                         }
                     }
                 } else {
-                    Column {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Icon(
                             imageVector = stat.icon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stat.value,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
@@ -582,7 +460,6 @@ private fun DashboardStatsRow(
                                     repeatDelayMillis = 2000
                                 )
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stat.label,
                             style = MaterialTheme.typography.labelSmall,

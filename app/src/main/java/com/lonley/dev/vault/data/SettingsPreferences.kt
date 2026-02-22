@@ -33,7 +33,9 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         val scrollVibrations = mapOf(
             "home" to prefs.getBoolean(KEY_SCROLL_HOME, false),
             "vault" to prefs.getBoolean(KEY_SCROLL_VAULT, false),
-            "settings" to prefs.getBoolean(KEY_SCROLL_SETTINGS, false)
+            "settings" to prefs.getBoolean(KEY_SCROLL_SETTINGS, false),
+            "passwordDetail" to prefs.getBoolean(KEY_SCROLL_PASSWORD_DETAIL, false),
+            "editEntry" to prefs.getBoolean(KEY_SCROLL_EDIT_ENTRY, false)
         )
 
         return SettingsState(
@@ -56,6 +58,8 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             .putBoolean(KEY_SCROLL_HOME, state.scrollVibrations["home"] ?: false)
             .putBoolean(KEY_SCROLL_VAULT, state.scrollVibrations["vault"] ?: false)
             .putBoolean(KEY_SCROLL_SETTINGS, state.scrollVibrations["settings"] ?: false)
+            .putBoolean(KEY_SCROLL_PASSWORD_DETAIL, state.scrollVibrations["passwordDetail"] ?: false)
+            .putBoolean(KEY_SCROLL_EDIT_ENTRY, state.scrollVibrations["editEntry"] ?: false)
             .apply()
     }
 
@@ -67,6 +71,8 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         private const val KEY_SCROLL_HOME = "scroll_vibration_home"
         private const val KEY_SCROLL_VAULT = "scroll_vibration_vault"
         private const val KEY_SCROLL_SETTINGS = "scroll_vibration_settings"
+        private const val KEY_SCROLL_PASSWORD_DETAIL = "scroll_vibration_password_detail"
+        private const val KEY_SCROLL_EDIT_ENTRY = "scroll_vibration_edit_entry"
         private const val KEY_FONT_SCALE = "font_scale"
     }
 }

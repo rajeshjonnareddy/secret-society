@@ -486,6 +486,7 @@ fun ExpressivePasswordDialog(
     val view = LocalView.current
     var masterPasswordInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var emptyError by remember { mutableStateOf(false) }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -521,16 +522,28 @@ fun ExpressivePasswordDialog(
                     )
                 }
 
+                if (emptyError) {
+                    Text(
+                        text = "Password cannot be empty",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
                 OutlinedTextField(
                     value = masterPasswordInput,
-                    onValueChange = { masterPasswordInput = it },
+                    onValueChange = {
+                        masterPasswordInput = it
+                        if (it.isNotEmpty()) emptyError = false
+                    },
                     label = { Text("Master Password") },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
-                    isError = errorMessage != null,
+                    isError = errorMessage != null || emptyError,
                     trailingIcon = {
                         IconButton(onClick = {
                             HapticHelper.performClick(view, hapticsEnabled)
@@ -562,7 +575,12 @@ fun ExpressivePasswordDialog(
                     Button(
                         onClick = {
                             HapticHelper.performClick(view, hapticsEnabled)
-                            onConfirm(masterPasswordInput)
+                            if (masterPasswordInput.isEmpty()) {
+                                emptyError = true
+                            } else {
+                                emptyError = false
+                                onConfirm(masterPasswordInput)
+                            }
                         },
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                     ) {
