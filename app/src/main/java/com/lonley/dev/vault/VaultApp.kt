@@ -79,6 +79,8 @@ import com.lonley.dev.vault.views.PasswordDetailScreen
 import com.lonley.dev.vault.views.PasswordEditScreen
 import com.lonley.dev.vault.views.SettingsScreen
 import com.lonley.dev.vault.views.UserProfileScreen
+import com.lonley.dev.vault.views.PasswordGeneratorDialog
+import com.lonley.dev.vault.views.VaultBottomBar
 import com.lonley.dev.vault.views.VaultScreen
 import kotlinx.coroutines.launch
 
@@ -219,6 +221,8 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showProfile by remember { mutableStateOf(false) }
             var selectedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             var editingEntry by remember { mutableStateOf<PasswordEntry?>(null) }
+            var showGeneratorDialog by remember { mutableStateOf(false) }
+            var generatedPasswordForAdd by remember { mutableStateOf("") }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
@@ -301,6 +305,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                 "detail" to 2, "edit" to 3
             )
 
+            Box(modifier = Modifier.fillMaxSize()) {
             AnimatedContent(
                 targetState = screenKey,
                 transitionSpec = {
@@ -402,14 +407,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             email = state.email,
                             encryptionType = state.encryptionType,
                             lastUpdatedAt = state.lastUpdatedAt,
-                            settingsState = settingsState,
-                            onBackClick = { showProfile = false },
-                            onLockClick = { viewModel.lockVault() },
-                            onDownloadClick = launchDownload,
-                            onSettingsClick = {
-                                showProfile = false
-                                showSettings = true
-                            }
+                            settingsState = settingsState
                         )
                     }
                     "settings" -> {
@@ -420,14 +418,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onAccentColorChange = { viewModel.setAccentColor(it) },
                             onHapticsToggle = { viewModel.setHapticsEnabled(it) },
                             onFontScaleChange = { viewModel.setFontScale(it) },
-                            onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
-                            onBackClick = { showSettings = false },
-                            onLockClick = { viewModel.lockVault() },
-                            onDownloadClick = launchDownload,
-                            onProfileClick = {
-                                showSettings = false
-                                showProfile = true
-                            }
+                            onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) }
                         )
                     }
                     else -> {
@@ -437,16 +428,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                             settingsState = settingsState,
                             isLoading = state.isLoading,
                             lastUpdatedAt = state.lastUpdatedAt,
-                            onAddPasswordClick = {
-                                viewModel.resetAutoLockTimer()
-                                showAddSheet = true
-                            },
-                            onBackClick = { viewModel.lockVault() },
-                            onDownloadClick = launchDownload,
-                            onProfileClick = {
-                                showProfile = true
-                            },
-                            onSettingsClick = { showSettings = true },
                             onEntryClick = { entry ->
                                 viewModel.resetAutoLockTimer()
                                 selectedEntry = entry
@@ -466,6 +447,53 @@ fun VaultApp(viewModel: VaultViewModel) {
                         )
                     }
                 }
+            }
+
+            // Fixed FAB — only on vault/settings/profile screens
+            if (screenKey in listOf("vault", "settings", "profile")) {
+                VaultBottomBar(
+                    currentScreen = screenKey,
+                    onLockClick = { viewModel.lockVault() },
+                    onDownloadClick = launchDownload,
+                    onProfileClick = {
+                        showProfile = true
+                        showSettings = false
+                    },
+                    onGeneratePasswordClick = {
+                        viewModel.resetAutoLockTimer()
+                        showGeneratorDialog = true
+                    },
+                    onSettingsClick = {
+                        showSettings = true
+                        showProfile = false
+                    },
+                    onPrimaryAction = {
+                        if (screenKey == "vault") {
+                            viewModel.resetAutoLockTimer()
+                            showAddSheet = true
+                        } else {
+                            showSettings = false
+                            showProfile = false
+                        }
+                    },
+                    hapticsEnabled = settingsState.hapticsEnabled,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+            } // end Box
+
+            if (showGeneratorDialog) {
+                PasswordGeneratorDialog(
+                    onDismiss = { showGeneratorDialog = false },
+                    onAddPassword = { password ->
+                        clipboardManager.setText(AnnotatedString(password))
+                        Toast.makeText(context, "Password copied", Toast.LENGTH_SHORT).show()
+                        generatedPasswordForAdd = password
+                        showGeneratorDialog = false
+                        showAddSheet = true
+                    },
+                    hapticsEnabled = settingsState.hapticsEnabled
+                )
             }
 
             if (showAddSheet) {
@@ -494,16 +522,19 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 startDate = startDate,
                                 reminderEnabled = reminderEnabled
                             )
+                            generatedPasswordForAdd = ""
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false
                             }
                         },
                         onCancel = {
+                            generatedPasswordForAdd = ""
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {
                                 if (!addSheetState.isVisible) showAddSheet = false
                             }
                         },
-                        hapticsEnabled = settingsState.hapticsEnabled
+                        hapticsEnabled = settingsState.hapticsEnabled,
+                        initialPassword = generatedPasswordForAdd
                     )
                 }
             }

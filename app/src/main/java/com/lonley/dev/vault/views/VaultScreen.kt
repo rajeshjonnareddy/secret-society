@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.Person
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -489,11 +491,6 @@ fun VaultScreen(
     settingsState: SettingsState? = null,
     isLoading: Boolean = false,
     lastUpdatedAt: Long = 0L,
-    onAddPasswordClick: () -> Unit,
-    onBackClick: () -> Unit = {},
-    onDownloadClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {},
     onEntryClick: (PasswordEntry) -> Unit = {},
     onCopyPassword: (PasswordEntry) -> Unit = {},
     onEditEntry: (PasswordEntry) -> Unit = {},
@@ -677,109 +674,161 @@ fun VaultScreen(
                         )
                     }
                     item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
             }
         }
+    }
+}
 
-        val iconTint = MaterialTheme.colorScheme.primary
-        val iconSize = Modifier.size(24.dp)
+// ── Shared bottom bar (rendered outside AnimatedContent in VaultApp) ──
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+@Composable
+fun VaultBottomBar(
+    currentScreen: String,
+    onLockClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onGeneratePasswordClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onPrimaryAction: () -> Unit,
+    hapticsEnabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    val iconTint = MaterialTheme.colorScheme.primary
+    val activeIconTint = MaterialTheme.colorScheme.onPrimaryContainer
+    val iconSize = Modifier.size(24.dp)
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+    ) {
+        Spacer(modifier = Modifier.weight(1f))
+
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 20.dp, vertical = 20.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(28.dp)
+                )
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(28.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
+            ) {
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onLockClick()
+                }, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = "Lock vault",
+                        tint = iconTint,
+                        modifier = iconSize
                     )
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
-                ) {
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                        onBackClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = "Lock vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                        onDownloadClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Download,
-                            contentDescription = "Download vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                        onProfileClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                        onSettingsClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
                 }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                ),
-                onClick = {
-                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                    onAddPasswordClick()
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onDownloadClick()
+                }, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Download,
+                        contentDescription = "Download vault",
+                        tint = iconTint,
+                        modifier = iconSize
+                    )
                 }
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(56.dp)
+                // Profile
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onProfileClick()
+                }, modifier = Modifier
+                    .size(48.dp)
+                    .then(
+                        if (currentScreen == "profile") Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                        else Modifier
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add New Password",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = "Profile",
+                        tint = if (currentScreen == "profile") activeIconTint else iconTint,
+                        modifier = iconSize
+                    )
+                }
+                // Password generator (before Settings per fix #2)
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onGeneratePasswordClick()
+                }, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Password,
+                        contentDescription = "Generate Password",
+                        tint = iconTint,
+                        modifier = iconSize
+                    )
+                }
+                // Settings
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onSettingsClick()
+                }, modifier = Modifier
+                    .size(48.dp)
+                    .then(
+                        if (currentScreen == "settings") Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                        else Modifier
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Settings,
+                        contentDescription = "Settings",
+                        tint = if (currentScreen == "settings") activeIconTint else iconTint,
                         modifier = iconSize
                     )
                 }
             }
         }
+
+        // Primary action button: Add on vault, Home on settings/profile
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+            ),
+            onClick = {
+                HapticHelper.performClick(view, hapticsEnabled)
+                onPrimaryAction()
+            }
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    imageVector = if (currentScreen == "vault") Icons.Default.Add else Icons.Outlined.Home,
+                    contentDescription = if (currentScreen == "vault") "Add New Password" else "Back to vault",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = iconSize
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
@@ -790,8 +839,7 @@ private fun VaultScreenEmptyPreview() {
     VaultTheme {
         VaultScreen(
             vaultName = "My Vault",
-            passwordEntries = emptyList(),
-            onAddPasswordClick = {}
+            passwordEntries = emptyList()
         )
     }
 }
@@ -806,8 +854,7 @@ private fun VaultScreenPopulatedPreview() {
                 PasswordEntry("1", "Google Account", "me@gmail.com", "secret", "google.com"),
                 PasswordEntry("2", "My Bank", "user123", "pass", "mybank.com"),
                 PasswordEntry("3", "Social Media", "social_user", "pwd123"),
-            ),
-            onAddPasswordClick = {}
+            )
         )
     }
 }

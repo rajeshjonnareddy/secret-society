@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -74,12 +75,13 @@ fun AddPasswordContent(
         reminderEnabled: Boolean
     ) -> Unit,
     onCancel: () -> Unit,
-    hapticsEnabled: Boolean = false
+    hapticsEnabled: Boolean = false,
+    initialPassword: String = ""
 ) {
     val view = LocalView.current
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var password by remember(initialPassword) { mutableStateOf(initialPassword) }
     var website by remember { mutableStateOf("") }
     var comments by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -96,6 +98,7 @@ fun AddPasswordContent(
     var startDate by remember { mutableStateOf<Long?>(null) }
     var reminderEnabled by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showGeneratorDialog by remember { mutableStateOf(false) }
 
     val isFormValid = name.isNotBlank() && username.isNotBlank() && password.isNotBlank()
     val fieldShape = MaterialTheme.shapes.extraLarge
@@ -190,15 +193,27 @@ fun AddPasswordContent(
                 )
             },
             trailingIcon = {
-                IconButton(onClick = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    passwordVisible = !passwordVisible
-                }) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                Row {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, hapticsEnabled)
+                        showGeneratorDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Password,
+                            contentDescription = "Generate Password",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, hapticsEnabled)
+                        passwordVisible = !passwordVisible
+                    }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             },
             modifier = Modifier
@@ -306,7 +321,13 @@ fun AddPasswordContent(
 
                 OutlinedTextField(
                     value = price,
-                    onValueChange = { price = it },
+                    onValueChange = { newValue ->
+                        val digits = newValue.filter { it.isDigit() }.take(7)
+                        price = if (digits.isEmpty()) "" else {
+                            val cents = digits.toLong()
+                            "%.2f".format(cents / 100.0)
+                        }
+                    },
                     label = { Text("Price (Optional)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -450,6 +471,18 @@ fun AddPasswordContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Password generator dialog
+    if (showGeneratorDialog) {
+        PasswordGeneratorDialog(
+            onDismiss = { showGeneratorDialog = false },
+            onAddPassword = { generated ->
+                password = generated
+                showGeneratorDialog = false
+            },
+            hapticsEnabled = hapticsEnabled
+        )
     }
 
     // Date picker dialog

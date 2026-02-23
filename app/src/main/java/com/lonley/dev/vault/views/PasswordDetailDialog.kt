@@ -836,7 +836,13 @@ fun PasswordEditScreen(
 
                     OutlinedTextField(
                         value = price,
-                        onValueChange = { price = it },
+                        onValueChange = { newValue ->
+                            val digits = newValue.filter { it.isDigit() }.take(7)
+                            price = if (digits.isEmpty()) "" else {
+                                val cents = digits.toLong()
+                                "%.2f".format(cents / 100.0)
+                            }
+                        },
                         label = { Text("Price (Optional)") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),

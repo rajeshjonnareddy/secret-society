@@ -1,10 +1,6 @@
 package com.lonley.dev.vault.views
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,23 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AttachEmail
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -43,9 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.model.SettingsState
-import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.util.formatRelativeTime
-import androidx.compose.ui.platform.LocalView
 
 @Composable
 fun UserProfileScreen(
@@ -53,22 +41,15 @@ fun UserProfileScreen(
     email: String,
     encryptionType: String,
     lastUpdatedAt: Long = 0L,
-    settingsState: SettingsState,
-    onBackClick: () -> Unit,
-    onLockClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    settingsState: SettingsState
 ) {
-    val view = LocalView.current
-
     val lastUpdatedText = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Profile",
@@ -129,103 +110,6 @@ fun UserProfileScreen(
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
-
-        // Bottom toolbar
-        val iconTint = MaterialTheme.colorScheme.primary
-        val iconSize = Modifier.size(24.dp)
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 20.dp, vertical = 20.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(28.dp)
-                    )
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
-                ) {
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                        onLockClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = "Lock vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                        onDownloadClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Download,
-                            contentDescription = "Download vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = { }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                        onSettingsClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Settings",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                ),
-                onClick = {
-                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                    onBackClick()
-                }
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Home,
-                        contentDescription = "Back to vault",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = iconSize
-                    )
-                }
-            }
-        }
-    }
 }
 
 // ── Private composables ──

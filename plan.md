@@ -1,179 +1,59 @@
-# Plan: Material 3 Expressive Transition Animations
+# Plan: 4 Changes
 
-## Context
+## 1. Add X button to PasswordGeneratorDialog
 
-The app uses a **state-driven navigation pattern** (not NavHost) in `VaultApp.kt`. Screen swaps happen instantly via `if/else if` chains on boolean flags (`showSettings`, `showProfile`, `selectedEntry`, `editingEntry`). There are currently **zero transition animations** between screens. Existing animations are limited to a few `AnimatedVisibility` expand/collapse sections and one `AnimatedContent` slogan rotator.
+**File:** `views/PasswordGeneratorDialog.kt`
 
-**Compose BOM:** 2024.09.00 | **Material3:** 1.4.0 — full M3 motion APIs available.
-
-**Goal:** Add M3-expressive transitions for screen changes, card appearances, and form reveals — without touching any functionality or navigation logic.
+Change the dialog header from just a title to a `Row` with the title on the left and a close `IconButton` (`Icons.Default.Close`) on the right, calling `onDismiss`.
 
 ---
 
-## Strategy
+## 2. Reorder FAB icons: generator before settings
 
-Wrap the screen-switching `if/else` chain in `VaultApp.kt` with `AnimatedContent`, using M3 expressive motion specs (emphasized easing, spring physics). Add staggered entrance animations to list items and cards. Enhance form field reveals with sequential slide-in animations.
+**File:** `views/VaultScreen.kt`
 
-All animations use `Modifier` additions or `AnimatedContent`/`AnimatedVisibility` wrappers — no structural changes to composables or their callback signatures.
-
----
-
-## Part 1: Screen Transitions in VaultApp.kt
-
-### What changes
-Replace the `if/else if` chain (lines 277–404) with a single `AnimatedContent` keyed on the current "screen identity". This gives us enter/exit transitions between all unlocked screens.
-
-### Screen key derivation
-```kotlin
-val currentScreen = when {
-    editingEntry != null -> "edit"
-    selectedEntry != null -> "detail"
-    showProfile -> "profile"
-    showSettings -> "settings"
-    else -> "vault"
-}
-```
-
-### Transition spec
-Use M3 expressive forward/backward motion:
-- **Forward** (vault → detail, detail → edit, vault → settings/profile): `fadeIn + slideInHorizontally(from end)` paired with `fadeOut + slideOutHorizontally(to start)`
-- **Backward** (edit → detail, detail → vault, settings → vault): reverse direction
-- Duration: **400ms** with `EmphasizedDecelerateEasing` (enter) and `EmphasizedAccelerateEasing` (exit) — standard M3 expressive timing
-- Use `SizeTransform(clip = false)` to prevent clipping during transitions
-
-### Screen depth ordering
-```
-vault(0) → detail(1) → edit(2)
-vault(0) → settings(1)
-vault(0) → profile(1)
-```
-Compare depths to decide forward vs backward animation direction.
-
-### Files modified
-- `VaultApp.kt` — wrap screen block in `AnimatedContent`, add screen key derivation and transition spec
+Swap the Password icon button and the Settings icon button in the FAB row so the order becomes:
+Lock, Download, Profile, **Password**, **Settings**
 
 ---
 
-## Part 2: Password List Item Staggered Entrance (VaultScreen.kt)
+## 3. Price field: proper currency input ($00.00)
 
-### What changes
-Add staggered fade+slide entrance animation to `PasswordEntryItem` cards in the `LazyColumn`.
+**Files:** `views/AddPasswordSheet.kt` and `views/PasswordDetailDialog.kt` (PasswordEditScreen has the same price field)
+
+- Add input filtering via `onValueChange` that only allows digits and a single decimal point, with max 2 decimal places
+- The existing `AttachMoney` leading icon already shows `$`
+
+---
+
+## 4. Fixed FAB row across all pages (content-only transitions)
+
+Currently each screen (VaultScreen, UserProfileScreen, SettingsScreen) duplicates the FAB row, and `AnimatedContent` in `VaultApp.kt` transitions the entire screen including the FAB.
 
 ### Approach
-Use `AnimatedVisibility` with `remember { MutableTransitionState(false) }` initialized to false, which auto-triggers the enter animation on first composition. Each item gets:
-- `fadeIn(tween(300, delayMillis = index * 50))`
-- `slideInVertically(tween(300, delayMillis = index * 50)) { it / 4 }`
 
-Cap the stagger at index 8 so items far down the list don't have excessive delays.
+Extract a shared `VaultBottomBar` composable and place it outside the `AnimatedContent` in `VaultApp.kt`, so it stays fixed while only the page content animates.
 
-### Files modified
-- `VaultScreen.kt` — add enter animation to items in `LazyColumn`
+**Steps:**
 
----
+1. **Extract `VaultBottomBar`** into `views/VaultScreen.kt` — a reusable glass FAB row that accepts callbacks and a `currentScreen` param to highlight the active icon.
 
-## Part 3: Dashboard Stat Cards Staggered Entrance (VaultScreen.kt)
+2. **Remove the FAB row from VaultScreen, UserProfileScreen, and SettingsScreen** — add bottom spacer (~100.dp) so content doesn't sit behind the fixed FAB.
 
-### What changes
-Add sequential scale+fade entrance to the 4 stat cards in `DashboardStatsRow`.
+3. **Restructure VaultApp.kt Unlocked block** — place `AnimatedContent` and `VaultBottomBar` as siblings inside a `Box`. The FAB is shown for vault/profile/settings screens, hidden for detail/edit (which keep their own bottom buttons).
 
-### Approach
-Each `GlassCard` in the `LazyRow` gets wrapped with `AnimatedVisibility` using `MutableTransitionState(false)`:
-- `fadeIn(tween(400, delayMillis = index * 80))`
-- `scaleIn(tween(400, delayMillis = index * 80), initialScale = 0.85f)`
+4. **Primary action button adapts per screen:**
+   - vault: Add (+) icon, opens AddPasswordSheet
+   - profile: Home icon, back to vault
+   - settings: Home icon, back to vault
+
+5. **Detail/Edit screens** keep their own bottom buttons unchanged.
 
 ### Files modified
-- `VaultScreen.kt` — `DashboardStatsRow` composable
 
----
-
-## Part 4: GlassCard Content Transitions (SettingsScreen)
-
-### What changes
-Add `animateContentSize()` to `GlassCard` sections that expand/collapse, so the card boundary animates smoothly when `AnimatedVisibility` children expand.
-
-### Approach
-Add `Modifier.animateContentSize(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))` to the inner `Column` of each `GlassCard` that contains expandable content in SettingsScreen (theme mode, font size, scroll vibrations sections).
-
-### Files modified
-- `SettingsScreen.kt` — add `animateContentSize` to 2 expandable GlassCard Column modifiers (Appearance card, Experience card)
-
----
-
-## Part 5: Form Field Sequential Entrance (PasswordEditScreen, AddPasswordSheet)
-
-### What changes
-Add staggered slide-up entrance for form fields when the edit screen or add sheet first appears.
-
-### Approach
-For `PasswordEditScreen`: Each `OutlinedTextField` and section gets wrapped in an `AnimatedVisibility` with `MutableTransitionState(false)`:
-- `fadeIn(tween(300, delayMillis = fieldIndex * 60))`
-- `slideInVertically(tween(300, delayMillis = fieldIndex * 60)) { it / 3 }`
-
-Same approach for `AddPasswordContent` in `AddPasswordSheet.kt`.
-
-### Files modified
-- `PasswordDetailDialog.kt` (contains `PasswordEditScreen`) — add staggered entrance to form fields
-- `AddPasswordSheet.kt` (contains `AddPasswordContent`) — add staggered entrance to form fields
-
----
-
-## Part 6: HomeScreen Feature Card Entrance
-
-### What changes
-Add a subtle scale+fade entrance animation to the `OutlinedCard` feature list on `HomeScreen`.
-
-### Approach
-Wrap the `OutlinedCard` in an `AnimatedVisibility` using `MutableTransitionState(false)`:
-- `fadeIn(tween(500))`
-- `slideInVertically(tween(500, easing = EmphasizedDecelerateEasing)) { it / 4 }`
-
-Also stagger the two CTA buttons at the bottom with a slight delay.
-
-### Files modified
-- `HomeScreen.kt` — add entrance animation to feature card and CTA buttons
-
----
-
-## Files Modified Summary
-
-| File | Changes |
-|------|---------|
-| `VaultApp.kt` | Wrap screen chain in `AnimatedContent` with M3 expressive transitions |
-| `VaultScreen.kt` | Staggered entrance for password list items + dashboard stat cards |
-| `SettingsScreen.kt` | `animateContentSize` on expandable GlassCard sections |
-| `PasswordDetailDialog.kt` | Staggered form field entrance in `PasswordEditScreen` |
-| `AddPasswordSheet.kt` | Staggered form field entrance in `AddPasswordContent` |
-| `HomeScreen.kt` | Feature card + CTA button entrance animations |
-
----
-
-## What is NOT changed
-- No navigation logic changes — all `if/else` conditions, `BackHandler`, state variables remain identical
-- No callback signatures modified
-- No new dependencies needed — all APIs available in current Compose BOM
-- No functionality affected — animations are purely visual additions
-- No changes to `GlassCard` composable itself (animations applied at call sites)
-
----
-
-## Animation Specs Reference
-
-| Animation | Duration | Easing | Notes |
-|-----------|----------|--------|-------|
-| Screen transitions | 400ms | EmphasizedDecelerate (enter) / EmphasizedAccelerate (exit) | M3 standard |
-| List item stagger | 300ms + 50ms/item delay | EaseOut | Capped at 8 items |
-| Stat card stagger | 400ms + 80ms/card delay | EaseOut + scaleIn(0.85) | 4 cards total |
-| Card content resize | Spring(0.8, 300) | Spring physics | For expand/collapse |
-| Form field stagger | 300ms + 60ms/field delay | EaseOut | ~6 fields |
-| Feature card entrance | 500ms | EmphasizedDecelerate | Single card |
-
----
-
-## Verification
-
-1. `gradlew.bat assembleDebug` — compiles with no errors
-2. Manual test: navigate between all screens, verify smooth transitions
-3. Verify back navigation still works correctly (BackHandler unaffected)
-4. Verify add password sheet still opens/closes properly
-5. Verify settings expand/collapse sections animate smoothly
-6. Verify no visual glitches or clipping during transitions
+| File | Change |
+|------|--------|
+| `views/VaultScreen.kt` | Extract `VaultBottomBar`; remove FAB from `VaultScreen`; add bottom spacer |
+| `views/UserProfileScreen.kt` | Remove FAB row; remove nav callback params; add bottom spacer |
+| `views/SettingsScreen.kt` | Remove FAB row; remove nav callback params; add bottom spacer |
+| `VaultApp.kt` | Place `VaultBottomBar` outside `AnimatedContent`; wire callbacks; update screen calls |

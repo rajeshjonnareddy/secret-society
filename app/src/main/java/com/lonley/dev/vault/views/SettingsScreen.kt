@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -30,12 +29,9 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -46,9 +42,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -93,20 +87,15 @@ fun SettingsScreen(
     onAccentColorChange: (AccentColor) -> Unit,
     onHapticsToggle: (Boolean) -> Unit,
     onFontScaleChange: (FontScale) -> Unit = {},
-    onScrollVibrationToggle: (String, Boolean) -> Unit,
-    onBackClick: () -> Unit,
-    onLockClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onProfileClick: () -> Unit = {}
+    onScrollVibrationToggle: (String, Boolean) -> Unit
 ) {
     val view = LocalView.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
             // ── Sticky header ──
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -518,94 +507,6 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
-
-        // Bottom toolbar
-        val iconTint = MaterialTheme.colorScheme.primary
-        val iconSize = Modifier.size(24.dp)
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 20.dp, vertical = 20.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(28.dp)
-                    )
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
-                ) {
-                    IconButton(onClick = onLockClick, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = "Lock vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = onDownloadClick, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Download,
-                            contentDescription = "Download vault",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                        onProfileClick()
-                    }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = iconTint,
-                            modifier = iconSize
-                        )
-                    }
-                    IconButton(onClick = onBackClick, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Back to vault",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = iconSize
-                        )
-                    }
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                ),
-                onClick = onBackClick
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Home,
-                        contentDescription = "Back to vault",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = iconSize
-                    )
-                }
-            }
-        }
-    }
 }
 
 // ── Private composables ──
