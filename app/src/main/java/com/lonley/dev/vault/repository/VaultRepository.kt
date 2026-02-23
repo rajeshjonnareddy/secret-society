@@ -75,7 +75,8 @@ class VaultRepository(private val filesDir: File) {
             passwordsArray.put(JSONObject().apply {
                 put("id", entry.id)
                 put("name", entry.name)
-                put("username", entry.username)
+                put("username", entry.username ?: JSONObject.NULL)
+                put("email", entry.email ?: JSONObject.NULL)
                 put("password", entry.password)
                 put("website", entry.website ?: JSONObject.NULL)
                 put("comments", entry.comments ?: JSONObject.NULL)
@@ -124,7 +125,8 @@ class VaultRepository(private val filesDir: File) {
             PasswordEntry(
                 id = obj.getString("id"),
                 name = obj.getString("name"),
-                username = obj.getString("username"),
+                username = if (obj.isNull("username")) null else obj.optString("username").ifBlank { null },
+                email = if (obj.isNull("email")) null else obj.optString("email").ifBlank { null },
                 password = obj.getString("password"),
                 website = if (obj.isNull("website")) null else obj.optString("website"),
                 comments = if (obj.isNull("comments")) null else obj.optString("comments"),

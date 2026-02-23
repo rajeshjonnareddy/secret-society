@@ -24,6 +24,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,7 +47,8 @@ import java.security.SecureRandom
 fun PasswordGeneratorDialog(
     onDismiss: () -> Unit,
     onAddPassword: (String) -> Unit,
-    hapticsEnabled: Boolean = false
+    hapticsEnabled: Boolean = false,
+    onInteraction: () -> Unit = {}
 ) {
     val view = LocalView.current
     val clipboardManager = LocalClipboardManager.current
@@ -85,6 +87,7 @@ fun PasswordGeneratorDialog(
                     onCheckedChange = {
                         HapticHelper.performClick(view, hapticsEnabled)
                         includeUppercase = it
+                        onInteraction()
                     }
                 )
                 ToggleRow(
@@ -93,6 +96,7 @@ fun PasswordGeneratorDialog(
                     onCheckedChange = {
                         HapticHelper.performClick(view, hapticsEnabled)
                         includeLowercase = it
+                        onInteraction()
                     }
                 )
                 ToggleRow(
@@ -101,6 +105,7 @@ fun PasswordGeneratorDialog(
                     onCheckedChange = {
                         HapticHelper.performClick(view, hapticsEnabled)
                         includeNumbers = it
+                        onInteraction()
                     }
                 )
                 ToggleRow(
@@ -109,6 +114,7 @@ fun PasswordGeneratorDialog(
                     onCheckedChange = {
                         HapticHelper.performClick(view, hapticsEnabled)
                         includeSpecial = it
+                        onInteraction()
                     }
                 )
 
@@ -123,7 +129,7 @@ fun PasswordGeneratorDialog(
                 )
                 Slider(
                     value = length,
-                    onValueChange = { length = it },
+                    onValueChange = { length = it; onInteraction() },
                     valueRange = 8f..64f,
                     steps = 55,
                     modifier = Modifier.fillMaxWidth()
@@ -136,6 +142,7 @@ fun PasswordGeneratorDialog(
                 Button(
                     onClick = {
                         HapticHelper.performClick(view, hapticsEnabled)
+                        onInteraction()
                         generatedPassword = generatePassword(
                             length = length.toInt(),
                             upper = includeUppercase,
@@ -170,6 +177,7 @@ fun PasswordGeneratorDialog(
                         trailingIcon = {
                             IconButton(onClick = {
                                 HapticHelper.performClick(view, hapticsEnabled)
+                                onInteraction()
                                 clipboardManager.setText(AnnotatedString(generatedPassword))
                             }) {
                                 Icon(
@@ -188,6 +196,7 @@ fun PasswordGeneratorDialog(
                     FilledTonalButton(
                         onClick = {
                             HapticHelper.performClick(view, hapticsEnabled)
+                            onInteraction()
                             onAddPassword(generatedPassword)
                         },
                         modifier = Modifier
@@ -205,9 +214,10 @@ fun PasswordGeneratorDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                TextButton(
+                OutlinedButton(
                     onClick = {
                         HapticHelper.performClick(view, hapticsEnabled)
+                        onInteraction()
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth(),

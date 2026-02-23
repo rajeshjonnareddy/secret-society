@@ -342,7 +342,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 editingEntry = current.copy(isFavorite = !current.isFavorite)
                                 selectedEntry = current.copy(isFavorite = !current.isFavorite)
                             },
-                            onSave = { id, name, username, password, website, comments,
+                            onSave = { id, name, username, email, password, website, comments,
                                        isFavorite, isSubscription, planType, price,
                                        subscriptionEmail, startDate, reminderEnabled ->
                                 viewModel.resetAutoLockTimer()
@@ -350,13 +350,24 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                 }
                                 viewModel.updatePassword(
-                                    id, name, username, password, website, comments,
-                                    isFavorite, isSubscription, planType, price,
-                                    subscriptionEmail, startDate, reminderEnabled
+                                    id, name,
+                                    username = username.ifBlank { null },
+                                    password = password,
+                                    website = website,
+                                    comments = comments,
+                                    email = email.ifBlank { null },
+                                    isFavorite = isFavorite,
+                                    isSubscription = isSubscription,
+                                    planType = planType,
+                                    price = price,
+                                    subscriptionEmail = subscriptionEmail,
+                                    startDate = startDate,
+                                    reminderEnabled = reminderEnabled
                                 )
                                 val updated = entry.copy(
                                     name = name,
-                                    username = username,
+                                    username = username.ifBlank { null },
+                                    email = email.ifBlank { null },
                                     password = password,
                                     website = website,
                                     comments = comments,
@@ -492,7 +503,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                         showGeneratorDialog = false
                         showAddSheet = true
                     },
-                    hapticsEnabled = settingsState.hapticsEnabled
+                    hapticsEnabled = settingsState.hapticsEnabled,
+                    onInteraction = { viewModel.resetAutoLockTimer() }
                 )
             }
 
@@ -501,8 +513,16 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onDismissRequest = { showAddSheet = false },
                     sheetState = addSheetState
                 ) {
+                    Box(modifier = Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Initial)
+                                viewModel.resetAutoLockTimer()
+                            }
+                        }
+                    }) {
                     AddPasswordContent(
-                        onConfirm = { name, username, password, website, comments,
+                        onConfirm = { name, username, email, password, website, comments,
                                       isSubscription, planType, price, subscriptionEmail,
                                       startDate, reminderEnabled ->
                             viewModel.resetAutoLockTimer()
@@ -511,10 +531,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                             }
                             viewModel.addPassword(
                                 name = name,
-                                username = username,
+                                username = username.ifBlank { null },
                                 password = password,
                                 website = website.ifBlank { null },
                                 comments = comments.ifBlank { null },
+                                email = email.ifBlank { null },
                                 isSubscription = isSubscription,
                                 planType = planType,
                                 price = price,
@@ -534,8 +555,10 @@ fun VaultApp(viewModel: VaultViewModel) {
                             }
                         },
                         hapticsEnabled = settingsState.hapticsEnabled,
-                        initialPassword = generatedPasswordForAdd
+                        initialPassword = generatedPasswordForAdd,
+                        onInteraction = { viewModel.resetAutoLockTimer() }
                     )
+                    }
                 }
             }
 

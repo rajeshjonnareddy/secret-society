@@ -148,12 +148,11 @@ fun PasswordDetailScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Header row: entry name + favorite star + delete icon
@@ -235,32 +234,63 @@ fun PasswordDetailScreen(
                             value = entry.name
                         )
 
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = dividerColor,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                        // Username row (conditional)
+                        if (!entry.username.isNullOrBlank()) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = dividerColor,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
 
-                        // Username row
-                        DetailFieldRow(
-                            icon = Icons.Outlined.Person,
-                            iconTint = MaterialTheme.colorScheme.primary,
-                            label = "Username",
-                            value = entry.username,
-                            trailingContent = {
-                                IconButton(onClick = {
-                                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                    onCopyToClipboard(entry.username)
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy username",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                            DetailFieldRow(
+                                icon = Icons.Outlined.Person,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                label = "Username",
+                                value = entry.username,
+                                trailingContent = {
+                                    IconButton(onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onCopyToClipboard(entry.username)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy username",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
+
+                        // Email row (conditional)
+                        if (!entry.email.isNullOrBlank()) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = dividerColor,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+
+                            DetailFieldRow(
+                                icon = Icons.Outlined.Email,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                label = "Email",
+                                value = entry.email,
+                                trailingContent = {
+                                    IconButton(onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onCopyToClipboard(entry.email)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy email",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            )
+                        }
 
                         HorizontalDivider(
                             thickness = 0.5.dp,
@@ -312,7 +342,20 @@ fun PasswordDetailScreen(
                                 icon = Icons.Outlined.Language,
                                 iconTint = MaterialTheme.colorScheme.primary,
                                 label = "Website",
-                                value = entry.website
+                                value = entry.website,
+                                trailingContent = {
+                                    IconButton(onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onCopyToClipboard(entry.website)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy website",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
                             )
                         }
 
@@ -458,18 +501,14 @@ fun PasswordDetailScreen(
                     }
                 }
 
-                // Bottom spacing so content doesn't sit behind buttons
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
-        }
 
-        // Fixed bottom buttons: Cancel + Edit side by side
+        // Bottom buttons: Cancel + Edit side by side
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
+                .padding(top = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
@@ -554,7 +593,7 @@ fun PasswordEditScreen(
     settingsState: SettingsState = SettingsState(),
     onCancel: () -> Unit,
     onSave: (
-        id: String, name: String, username: String, password: String,
+        id: String, name: String, username: String, email: String, password: String,
         website: String?, comments: String?,
         isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
         price: String?, subscriptionEmail: String?, startDate: Long?,
@@ -567,7 +606,8 @@ fun PasswordEditScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     var name by remember(entry) { mutableStateOf(entry.name) }
-    var username by remember(entry) { mutableStateOf(entry.username) }
+    var username by remember(entry) { mutableStateOf(entry.username ?: "") }
+    var email by remember(entry) { mutableStateOf(entry.email ?: "") }
     var password by remember(entry) { mutableStateOf(entry.password) }
     var website by remember(entry) { mutableStateOf(entry.website ?: "") }
     var comments by remember(entry) { mutableStateOf(entry.comments ?: "") }
@@ -584,10 +624,9 @@ fun PasswordEditScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     var nameDirty by remember { mutableStateOf(false) }
-    var usernameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+    val isFormValid = name.isNotBlank() && password.isNotBlank()
     val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
@@ -685,21 +724,33 @@ fun PasswordEditScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
+                label = { Text("Username (Optional)") },
                 singleLine = true,
-                isError = usernameDirty && username.isBlank(),
-                supportingText = if (usernameDirty && username.isBlank()) {
-                    { Text("Username is required") }
-                } else null,
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = null
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { if (!it.isFocused) usernameDirty = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = fieldShape
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email (Optional)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Email,
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
                 shape = fieldShape
             )
 
@@ -837,11 +888,12 @@ fun PasswordEditScreen(
                     OutlinedTextField(
                         value = price,
                         onValueChange = { newValue ->
-                            val digits = newValue.filter { it.isDigit() }.take(7)
-                            price = if (digits.isEmpty()) "" else {
-                                val cents = digits.toLong()
-                                "%.2f".format(cents / 100.0)
-                            }
+                            val filtered = newValue.filter { it.isDigit() || it == '.' }
+                            val parts = filtered.split(".")
+                            val isValid = parts.size <= 2 &&
+                                (parts.getOrNull(0)?.length ?: 0) <= 5 &&
+                                (parts.getOrNull(1)?.length ?: 0) <= 2
+                            if (isValid) price = filtered
                         },
                         label = { Text("Price (Optional)") },
                         singleLine = true,
@@ -945,7 +997,7 @@ fun PasswordEditScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(top = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             FilledTonalButton(
@@ -968,7 +1020,7 @@ fun PasswordEditScreen(
                 onClick = {
                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
                     onSave(
-                        entry.id, name, username, password,
+                        entry.id, name, username, email, password,
                         website.ifBlank { null }, comments.ifBlank { null },
                         isFavorite, isSubscription, selectedPlanType,
                         price.ifBlank { null }, subscriptionEmail.ifBlank { null },

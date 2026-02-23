@@ -64,6 +64,7 @@ fun AddPasswordContent(
     onConfirm: (
         name: String,
         username: String,
+        email: String,
         password: String,
         website: String,
         comments: String,
@@ -76,18 +77,19 @@ fun AddPasswordContent(
     ) -> Unit,
     onCancel: () -> Unit,
     hapticsEnabled: Boolean = false,
-    initialPassword: String = ""
+    initialPassword: String = "",
+    onInteraction: () -> Unit = {}
 ) {
     val view = LocalView.current
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember(initialPassword) { mutableStateOf(initialPassword) }
     var website by remember { mutableStateOf("") }
     var comments by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     var nameDirty by remember { mutableStateOf(false) }
-    var usernameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
     // Subscription fields
@@ -100,7 +102,7 @@ fun AddPasswordContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showGeneratorDialog by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+    val isFormValid = name.isNotBlank() && password.isNotBlank()
     val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
@@ -128,7 +130,7 @@ fun AddPasswordContent(
 
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = { name = it; onInteraction() },
             label = { Text("Name") },
             singleLine = true,
             isError = nameDirty && name.isBlank(),
@@ -152,13 +154,9 @@ fun AddPasswordContent(
 
         OutlinedTextField(
             value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
+            onValueChange = { username = it; onInteraction() },
+            label = { Text("Username (Optional)") },
             singleLine = true,
-            isError = usernameDirty && username.isBlank(),
-            supportingText = if (usernameDirty && username.isBlank()) {
-                { Text("Username is required") }
-            } else null,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Person,
@@ -166,9 +164,26 @@ fun AddPasswordContent(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { if (!it.isFocused) usernameDirty = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = fieldShape
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it; onInteraction() },
+            label = { Text("Email (Optional)") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Outlined.Email,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
             shape = fieldShape
         )
 
@@ -176,7 +191,7 @@ fun AddPasswordContent(
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { password = it; onInteraction() },
             label = { Text("Password") },
             singleLine = true,
             isError = passwordDirty && password.isBlank(),
@@ -226,7 +241,7 @@ fun AddPasswordContent(
 
         OutlinedTextField(
             value = website,
-            onValueChange = { website = it },
+            onValueChange = { website = it; onInteraction() },
             label = { Text("Website (Optional)") },
             singleLine = true,
             leadingIcon = {
@@ -244,7 +259,7 @@ fun AddPasswordContent(
 
         OutlinedTextField(
             value = comments,
-            onValueChange = { comments = it },
+            onValueChange = { comments = it; onInteraction() },
             label = { Text("Comments (Optional)") },
             singleLine = false,
             minLines = 2,
@@ -289,6 +304,7 @@ fun AddPasswordContent(
                 onCheckedChange = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     isSubscription = it
+                    onInteraction()
                 }
             )
         }
@@ -311,6 +327,7 @@ fun AddPasswordContent(
                             onClick = {
                                 HapticHelper.performClick(view, hapticsEnabled)
                                 selectedPlanType = plan
+                                onInteraction()
                             },
                             label = { Text(plan.label) }
                         )
@@ -322,11 +339,13 @@ fun AddPasswordContent(
                 OutlinedTextField(
                     value = price,
                     onValueChange = { newValue ->
-                        val digits = newValue.filter { it.isDigit() }.take(7)
-                        price = if (digits.isEmpty()) "" else {
-                            val cents = digits.toLong()
-                            "%.2f".format(cents / 100.0)
-                        }
+                        onInteraction()
+                        val filtered = newValue.filter { it.isDigit() || it == '.' }
+                        val parts = filtered.split(".")
+                        val isValid = parts.size <= 2 &&
+                            (parts.getOrNull(0)?.length ?: 0) <= 5 &&
+                            (parts.getOrNull(1)?.length ?: 0) <= 2
+                        if (isValid) price = filtered
                     },
                     label = { Text("Price (Optional)") },
                     singleLine = true,
@@ -346,7 +365,7 @@ fun AddPasswordContent(
 
                 OutlinedTextField(
                     value = subscriptionEmail,
-                    onValueChange = { subscriptionEmail = it },
+                    onValueChange = { subscriptionEmail = it; onInteraction() },
                     label = { Text("Subscription Email (Optional)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -417,6 +436,7 @@ fun AddPasswordContent(
                         onCheckedChange = {
                             HapticHelper.performClick(view, hapticsEnabled)
                             reminderEnabled = it
+                            onInteraction()
                         }
                     )
                 }
@@ -449,7 +469,7 @@ fun AddPasswordContent(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     onConfirm(
-                        name, username, password, website, comments,
+                        name, username, email, password, website, comments,
                         isSubscription, selectedPlanType,
                         price.ifBlank { null },
                         subscriptionEmail.ifBlank { null },
@@ -481,7 +501,8 @@ fun AddPasswordContent(
                 password = generated
                 showGeneratorDialog = false
             },
-            hapticsEnabled = hapticsEnabled
+            hapticsEnabled = hapticsEnabled,
+            onInteraction = onInteraction
         )
     }
 
@@ -496,6 +517,7 @@ fun AddPasswordContent(
                 TextButton(onClick = {
                     startDate = datePickerState.selectedDateMillis
                     showDatePicker = false
+                    onInteraction()
                 }) {
                     Text("OK")
                 }
@@ -516,7 +538,7 @@ fun AddPasswordContent(
 private fun AddPasswordContentPreview() {
     VaultTheme {
         AddPasswordContent(
-            onConfirm = { _, _, _, _, _, _, _, _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
             onCancel = {}
         )
     }

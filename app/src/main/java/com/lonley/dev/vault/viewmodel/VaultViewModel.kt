@@ -355,10 +355,11 @@ class VaultViewModel(
 
     fun addPassword(
         name: String,
-        username: String,
+        username: String?,
         password: String,
         website: String?,
         comments: String? = null,
+        email: String? = null,
         isFavorite: Boolean = false,
         isSubscription: Boolean = false,
         planType: PlanType? = null,
@@ -371,6 +372,7 @@ class VaultViewModel(
             id = UUID.randomUUID().toString(),
             name = name,
             username = username,
+            email = email,
             password = password,
             website = website,
             comments = comments,
@@ -398,10 +400,11 @@ class VaultViewModel(
     fun updatePassword(
         id: String,
         name: String,
-        username: String,
+        username: String?,
         password: String,
         website: String?,
         comments: String? = null,
+        email: String? = null,
         isFavorite: Boolean = false,
         isSubscription: Boolean = false,
         planType: PlanType? = null,
@@ -416,6 +419,7 @@ class VaultViewModel(
         entries[index] = entries[index].copy(
             name = name,
             username = username,
+            email = email,
             password = password,
             website = website,
             comments = comments,

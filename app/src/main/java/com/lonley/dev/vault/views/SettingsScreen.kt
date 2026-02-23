@@ -445,8 +445,14 @@ fun SettingsScreen(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         SettingsRow(
                             icon = Icons.Outlined.Info,
-                            title = "About App",
-                            subtitle = "What we do"
+                            title = "What about me",
+                            trailing = {
+                                Text(
+                                    text = "Placeholder",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         )
                         SettingsDivider()
                         SettingsRow(
@@ -504,7 +510,7 @@ fun SettingsScreen(
                 }
 
                 // Bottom spacing for toolbar
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(120.dp))
             }
         }
 }

@@ -3,7 +3,8 @@ package com.lonley.dev.vault.model
 data class PasswordEntry(
     val id: String,
     val name: String,
-    val username: String,
+    val username: String? = null,
+    val email: String? = null,
     val password: String,
     val website: String? = null,
     val comments: String? = null,

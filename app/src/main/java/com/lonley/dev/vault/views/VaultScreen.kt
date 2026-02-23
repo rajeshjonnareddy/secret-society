@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,10 +41,11 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +64,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.lonley.dev.vault.ui.theme.LocalGlassColors
@@ -233,8 +234,12 @@ private fun PasswordEntryItem(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val displayIdentifier = entry.username?.takeIf { it.isNotBlank() }
+                                    ?: entry.email?.takeIf { it.isNotBlank() }
                                 Text(
-                                    text = "@${entry.username}",
+                                    text = if (displayIdentifier != null) {
+                                        if (entry.username?.isNotBlank() == true) "@$displayIdentifier" else displayIdentifier
+                                    } else "",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -284,7 +289,8 @@ private fun PasswordEntryItem(
                             if (!entry.website.isNullOrBlank()) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.widthIn(max = 120.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Language,
@@ -297,7 +303,11 @@ private fun PasswordEntryItem(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        modifier = Modifier.basicMarquee(
+                                            iterations = Int.MAX_VALUE,
+                                            initialDelayMillis = 1000,
+                                            repeatDelayMillis = 2000
+                                        )
                                     )
                                 }
                             }
@@ -508,13 +518,33 @@ fun VaultScreen(
         }
     }
 
-    val filterOptions = listOf("All", "Favorites", "Subscriptions", "Websites", "Apps", "Social", "Other")
-    var selectedFilter by remember { mutableStateOf(filterOptions.first()) }
+    var selectedFilter by remember { mutableStateOf("All") }
+    val relativeTime = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
+
+    data class FilterPill(
+        val label: String,
+        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val count: Int? = null,
+        val displayValue: String? = null,
+        val isFilter: Boolean = true
+    )
+
+    val filterPills = listOf(
+        FilterPill("All", Icons.Outlined.Password, count = passwordEntries.size),
+        FilterPill("Favorites", Icons.Outlined.Favorite, count = passwordEntries.count { it.isFavorite }),
+        FilterPill("Subscriptions", Icons.Outlined.Subscriptions, count = passwordEntries.count { it.isSubscription }),
+        FilterPill("Websites", Icons.Outlined.Language, count = passwordEntries.count { !it.website.isNullOrBlank() }),
+        FilterPill("Apps", Icons.Outlined.Apps),
+        FilterPill("Social", Icons.Outlined.People),
+        FilterPill("Other", Icons.Outlined.MoreHoriz),
+        FilterPill("Last Updated", Icons.Outlined.LocalActivity, displayValue = relativeTime, isFilter = false)
+    )
 
     val filteredEntries = passwordEntries.filter { entry ->
         val matchesSearch = searchQuery.isBlank() ||
                 entry.name.contains(searchQuery, ignoreCase = true) ||
-                entry.username.contains(searchQuery, ignoreCase = true)
+                (entry.username?.contains(searchQuery, ignoreCase = true) == true) ||
+                (entry.email?.contains(searchQuery, ignoreCase = true) == true)
         val matchesFilter = selectedFilter == "All" || when (selectedFilter) {
             "Favorites" -> entry.isFavorite
             "Subscriptions" -> entry.isSubscription
@@ -552,49 +582,166 @@ fun VaultScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(0.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // ── Filter chips (horizontally scrollable) ──
+            // ── Filter pills (credit card style, replaces both chips + stats row) ──
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+            // Diagonal gradient wash (bottom-left → top-right)
+            val cardGradient = Brush.linearGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.12f),
+                    tertiaryColor.copy(alpha = 0.08f),
+                    Color.Transparent
+                ),
+                start = Offset(0f, Float.POSITIVE_INFINITY),
+                end = Offset(Float.POSITIVE_INFINITY, 0f)
+            )
+            // Radial shine in top-right corner
+            val shineGradient = Brush.radialGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.10f),
+                    Color.Transparent
+                ),
+                center = Offset(Float.POSITIVE_INFINITY, 0f),
+                radius = 200f
+            )
+
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(filterOptions) { _, filter ->
-                    FilterChip(
-                        selected = selectedFilter == filter,
-                        onClick = {
-                            HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                            selectedFilter = filter
-                        },
-                        label = {
-                            Text(
-                                text = filter,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (selectedFilter == filter) FontWeight.SemiBold else FontWeight.Normal
+                items(filterPills.size) { index ->
+                    val pill = filterPills[index]
+                    val isSelected = pill.isFilter && selectedFilter == pill.label
+
+                    GlassCard(
+                        modifier = Modifier
+                            .width(if (pill.count != null) 120.dp else 100.dp)
+                            .height(90.dp)
+                            .then(
+                                if (isSelected) Modifier.border(
+                                    1.5.dp,
+                                    Brush.linearGradient(listOf(primaryColor, tertiaryColor)),
+                                    RoundedCornerShape(16.dp)
+                                ) else Modifier
                             )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selectedFilter == filter,
-                            borderColor = MaterialTheme.colorScheme.outlineVariant
+                            .then(
+                                if (pill.isFilter) Modifier.clickable {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    selectedFilter = pill.label
+                                } else Modifier
+                            )
+                    ) {
+                        // Credit card background layers
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(cardGradient)
+                                .background(shineGradient)
                         )
-                    )
+
+                        // Content
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(14.dp)
+                        ) {
+                            if (pill.count != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxHeight(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Icon(
+                                            imageVector = pill.icon,
+                                            contentDescription = null,
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = pill.label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .widthIn(min = 36.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = pill.count.toString(),
+                                            style = MaterialTheme.typography.displayMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            } else if (pill.displayValue != null) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Icon(
+                                        imageVector = pill.icon,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = pill.displayValue,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .basicMarquee(
+                                                iterations = Int.MAX_VALUE,
+                                                initialDelayMillis = 1000,
+                                                repeatDelayMillis = 2000
+                                            )
+                                    )
+                                    Text(
+                                        text = pill.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Icon(
+                                        imageVector = pill.icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = pill.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ── Dashboard stats ──
-            DashboardStatsRow(
-                passwordEntries = passwordEntries,
-                totalPasswords = passwordEntries.size,
-                lastUpdatedAt = lastUpdatedAt
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // ── Content area ──
             if (isLoading) {
@@ -674,7 +821,7 @@ fun VaultScreen(
                         )
                     }
                     item {
-                        Spacer(modifier = Modifier.height(100.dp))
+                        Spacer(modifier = Modifier.height(120.dp))
                     }
                 }
             }
@@ -851,9 +998,9 @@ private fun VaultScreenPopulatedPreview() {
         VaultScreen(
             vaultName = "My Vault",
             passwordEntries = listOf(
-                PasswordEntry("1", "Google Account", "me@gmail.com", "secret", "google.com"),
-                PasswordEntry("2", "My Bank", "user123", "pass", "mybank.com"),
-                PasswordEntry("3", "Social Media", "social_user", "pwd123"),
+                PasswordEntry(id = "1", name = "Google Account", username = "me@gmail.com", password = "secret", website = "google.com"),
+                PasswordEntry(id = "2", name = "My Bank", username = "user123", password = "pass", website = "mybank.com"),
+                PasswordEntry(id = "3", name = "Social Media", username = "social_user", password = "pwd123"),
             )
         )
     }
