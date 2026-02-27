@@ -337,19 +337,20 @@ fun AddPasswordContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
-                    value = price,
+                    value = if (price.isEmpty()) "" else {
+                        val cents = price.toLongOrNull() ?: 0L
+                        "%.2f".format(cents / 100.0)
+                    },
                     onValueChange = { newValue ->
                         onInteraction()
-                        val filtered = newValue.filter { it.isDigit() || it == '.' }
-                        val parts = filtered.split(".")
-                        val isValid = parts.size <= 2 &&
-                            (parts.getOrNull(0)?.length ?: 0) <= 5 &&
-                            (parts.getOrNull(1)?.length ?: 0) <= 2
-                        if (isValid) price = filtered
+                        val digitsOnly = newValue.filter { it.isDigit() }
+                        if (digitsOnly.length <= 7) {
+                            price = digitsOnly
+                        }
                     },
                     label = { Text("Price (Optional)") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.AttachMoney,

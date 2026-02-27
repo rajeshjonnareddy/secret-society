@@ -77,6 +77,7 @@ import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.SettingsState
+import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.nextRenewalDate
 import com.lonley.dev.vault.util.HapticHelper
 
@@ -401,7 +402,7 @@ fun PasswordDetailScreen(
                                     icon = Icons.Outlined.AttachMoney,
                                     iconTint = MaterialTheme.colorScheme.tertiary,
                                     label = "Price",
-                                    value = entry.price
+                                    value = "$${formatPrice(entry.price)}"
                                 )
                             }
 
@@ -616,7 +617,11 @@ fun PasswordEditScreen(
     var isFavorite by remember(entry) { mutableStateOf(entry.isFavorite) }
     var isSubscription by remember(entry) { mutableStateOf(entry.isSubscription) }
     var selectedPlanType by remember(entry) { mutableStateOf(entry.planType) }
-    var price by remember(entry) { mutableStateOf(entry.price ?: "") }
+    var price by remember(entry) {
+        val raw = entry.price ?: ""
+        // Convert old "9.99" format to raw digits "999"
+        mutableStateOf(if ('.' in raw) raw.replace(".", "") else raw)
+    }
     var subscriptionEmail by remember(entry) { mutableStateOf(entry.subscriptionEmail ?: "") }
     var startDate by remember(entry) { mutableStateOf(entry.startDate) }
     var reminderEnabled by remember(entry) { mutableStateOf(entry.reminderEnabled) }
@@ -886,18 +891,19 @@ fun PasswordEditScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = price,
+                        value = if (price.isEmpty()) "" else {
+                            val cents = price.toLongOrNull() ?: 0L
+                            "%.2f".format(cents / 100.0)
+                        },
                         onValueChange = { newValue ->
-                            val filtered = newValue.filter { it.isDigit() || it == '.' }
-                            val parts = filtered.split(".")
-                            val isValid = parts.size <= 2 &&
-                                (parts.getOrNull(0)?.length ?: 0) <= 5 &&
-                                (parts.getOrNull(1)?.length ?: 0) <= 2
-                            if (isValid) price = filtered
+                            val digitsOnly = newValue.filter { it.isDigit() }
+                            if (digitsOnly.length <= 7) {
+                                price = digitsOnly
+                            }
                         },
                         label = { Text("Price (Optional)") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.AttachMoney,

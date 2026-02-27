@@ -14,7 +14,7 @@ class RenewalCheckWorker(
         val allEntries = prefs.all
 
         val now = System.currentTimeMillis()
-        val threeDaysMs = 3 * 86_400_000L
+        val fiveDaysMs = 5 * 86_400_000L
         var notificationId = 1000
 
         for ((key, value) in allEntries) {
@@ -24,14 +24,25 @@ class RenewalCheckWorker(
             val entryName = prefs.getString("${entryId}_name", null) ?: continue
 
             val diff = nextRenewal - now
-            if (diff in 0..threeDaysMs) {
+            if (diff in 0..fiveDaysMs) {
                 val daysUntil = (diff / 86_400_000L).toInt()
-                VaultNotificationHelper.sendRenewalNotification(
-                    applicationContext,
-                    entryName,
-                    daysUntil,
-                    notificationId++
-                )
+                if (daysUntil == 0) {
+                    repeat(3) {
+                        VaultNotificationHelper.sendRenewalNotification(
+                            applicationContext,
+                            entryName,
+                            0,
+                            notificationId++
+                        )
+                    }
+                } else {
+                    VaultNotificationHelper.sendRenewalNotification(
+                        applicationContext,
+                        entryName,
+                        daysUntil,
+                        notificationId++
+                    )
+                }
             }
         }
 

@@ -75,6 +75,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.drop
+import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.VaultTheme
@@ -252,7 +253,7 @@ private fun PasswordEntryItem(
                                     ) {
                                         if (!entry.price.isNullOrBlank()) {
                                             Text(
-                                                text = "$${entry.price}",
+                                                text = "$${formatPrice(entry.price)}",
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface
