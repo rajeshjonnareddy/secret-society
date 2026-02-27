@@ -50,8 +50,8 @@ class VaultViewModel(
 
     override fun onStart(owner: LifecycleOwner) {
         if (wasBackgrounded && _uiState.value is VaultUiState.Unlocked) {
-            VaultLogger.i("ViewModel", "App foregrounded — auto-locking vault")
-            lockVault()
+            VaultLogger.i("ViewModel", "App foregrounded — suspending vault for re-auth")
+            suspendVault()
         }
         wasBackgrounded = false
     }
