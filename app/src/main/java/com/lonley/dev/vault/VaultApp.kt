@@ -325,8 +325,7 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             // Back button handling: navigate back through screen stack
             BackHandler(enabled = recoveryState is RecoveryState.ShowPhrase) {
-                viewModel.confirmRecoveryPhraseSeen()
-                recoveryFromCreation = false
+                // Block back navigation — user must tap "Secure Your Vault"
             }
             BackHandler(enabled = editingEntry != null) {
                 editingEntry = null
@@ -476,21 +475,20 @@ fun VaultApp(viewModel: VaultViewModel) {
                         )
                     }
                     "recovery" -> {
-                        val phraseWords = (recoveryState as? RecoveryState.ShowPhrase)?.words ?: emptyList()
+                        // Snapshot words so they survive the exit animation after recoveryState resets to None
+                        val phraseWords = remember { (recoveryState as? RecoveryState.ShowPhrase)?.words ?: emptyList() }
                         RecoveryPhraseScreen(
                             words = phraseWords,
-                            cancelLabel = if (recoveryFromCreation) "Skip" else "Cancel",
                             onConfirm = {
                                 viewModel.confirmRecoveryPhraseSeen()
-                                recoveryFromCreation = false
-                                // Navigate to home
-                                showProfile = false
-                                showSettings = false
-                                selectedEntry = null
-                                editingEntry = null
-                            },
-                            onCancel = {
-                                viewModel.confirmRecoveryPhraseSeen()
+                                if (!recoveryFromCreation) {
+                                    showProfile = true
+                                } else {
+                                    showProfile = false
+                                    showSettings = false
+                                    selectedEntry = null
+                                    editingEntry = null
+                                }
                                 recoveryFromCreation = false
                             }
                         )

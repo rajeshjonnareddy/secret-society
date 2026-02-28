@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,9 +32,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun RecoveryPhraseScreen(
     words: List<String>,
-    cancelLabel: String = "Cancel",
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit
+    onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -116,41 +113,21 @@ fun RecoveryPhraseScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.extraLarge
-                ) {
-                    Text(
-                        text = cancelLabel,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Button(
-                    onClick = onConfirm,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    shape = MaterialTheme.shapes.extraLarge
-                ) {
-                    Text(
-                        text = "Secure Your Vault",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = onConfirm,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+                .height(56.dp),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Text(
+                text = "Secure Your Vault",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
