@@ -37,3 +37,9 @@ sealed interface SaveState {
     data object SaveSuccess : SaveState
     data class SaveError(val message: String) : SaveState
 }
+
+sealed interface ChangePasswordState {
+    data object Idle : ChangePasswordState
+    data object Success : ChangePasswordState
+    data class Error(val message: String) : ChangePasswordState
+}

@@ -70,11 +70,13 @@ import android.os.Build
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
+import com.lonley.dev.vault.model.ChangePasswordState
 import com.lonley.dev.vault.model.RecoveryState
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
+import com.lonley.dev.vault.views.ChangePasswordScreen
 import com.lonley.dev.vault.views.HomeScreen
 import com.lonley.dev.vault.views.PasswordDetailScreen
 import com.lonley.dev.vault.views.PasswordEditScreen
@@ -243,6 +245,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showProfile by remember { mutableStateOf(false) }
             var selectedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             var editingEntry by remember { mutableStateOf<PasswordEntry?>(null) }
+            var showChangePassword by remember { mutableStateOf(false) }
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
             val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -252,6 +255,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             val suspendError by viewModel.suspendError.collectAsState()
             val recoveryState by viewModel.recoveryState.collectAsState()
             val hasRecovery by viewModel.hasRecovery.collectAsState()
+            val changePasswordState by viewModel.changePasswordState.collectAsState()
             var showRecoveryPrompt by remember { mutableStateOf(false) }
             var recoveryFromCreation by remember { mutableStateOf(false) }
 
@@ -264,6 +268,16 @@ fun VaultApp(viewModel: VaultViewModel) {
             val launchDownload = {
                 viewModel.resetAutoLockTimer()
                 downloadLauncher.launch(viewModel.getVaultFileName())
+            }
+
+            // Handle change password success
+            LaunchedEffect(changePasswordState) {
+                if (changePasswordState is ChangePasswordState.Success) {
+                    Toast.makeText(context, "Master password changed", Toast.LENGTH_SHORT).show()
+                    showChangePassword = false
+                    showProfile = true
+                    viewModel.resetChangePasswordState()
+                }
             }
 
             // Post-creation recovery prompt
@@ -336,6 +350,11 @@ fun VaultApp(viewModel: VaultViewModel) {
             BackHandler(enabled = showSettings) {
                 showSettings = false
             }
+            BackHandler(enabled = showChangePassword) {
+                showChangePassword = false
+                showProfile = true
+                viewModel.resetChangePasswordState()
+            }
             BackHandler(enabled = showProfile) {
                 showProfile = false
             }
@@ -355,6 +374,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             val showRecoveryPhrase = recoveryState is RecoveryState.ShowPhrase
             val screenKey = when {
                 showRecoveryPhrase -> "recovery"
+                showChangePassword -> "changePassword"
                 editingEntry != null -> "edit"
                 selectedEntry != null -> "detail"
                 showProfile -> "profile"
@@ -365,7 +385,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             // Screen depth for determining slide direction
             val screenDepth = mapOf(
                 "vault" to 0, "profile" to 1, "settings" to 1, "recovery" to 1,
-                "detail" to 2, "edit" to 3
+                "changePassword" to 2, "detail" to 2, "edit" to 3
             )
 
             Box(modifier = Modifier.fillMaxSize()) {
@@ -493,6 +513,21 @@ fun VaultApp(viewModel: VaultViewModel) {
                             }
                         )
                     }
+                    "changePassword" -> {
+                        viewModel.resetAutoLockTimer()
+                        ChangePasswordScreen(
+                            errorMessage = (changePasswordState as? ChangePasswordState.Error)?.message,
+                            onChangePassword = { oldPw, newPw ->
+                                viewModel.resetAutoLockTimer()
+                                viewModel.changeMasterPassword(oldPw, newPw)
+                            },
+                            onCancel = {
+                                showChangePassword = false
+                                showProfile = true
+                                viewModel.resetChangePasswordState()
+                            }
+                        )
+                    }
                     "profile" -> {
                         viewModel.resetAutoLockTimer()
                         UserProfileScreen(
@@ -505,6 +540,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onSetupRecovery = {
                                 recoveryFromCreation = false
                                 viewModel.generateRecoveryPhrase()
+                            },
+                            onChangePassword = {
+                                viewModel.resetAutoLockTimer()
+                                showChangePassword = true
+                                showProfile = false
                             }
                         )
                     }

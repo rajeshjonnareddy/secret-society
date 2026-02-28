@@ -12,6 +12,7 @@ import com.lonley.dev.vault.crypto.RecoveryCrypto
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.RecoveryState
+import com.lonley.dev.vault.model.ChangePasswordState
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.VaultUiState
@@ -136,6 +137,9 @@ class VaultViewModel(
 
     private val _recoveryState = MutableStateFlow<RecoveryState>(RecoveryState.None)
     val recoveryState: StateFlow<RecoveryState> = _recoveryState.asStateFlow()
+
+    private val _changePasswordState = MutableStateFlow<ChangePasswordState>(ChangePasswordState.Idle)
+    val changePasswordState: StateFlow<ChangePasswordState> = _changePasswordState.asStateFlow()
 
     private val _settingsState = MutableStateFlow(settingsPreferences.load())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
@@ -583,6 +587,44 @@ class VaultViewModel(
         autoLockJob?.cancel()
         masterPassword?.fill('\u0000')
         masterPassword = null
+    }
+
+    fun changeMasterPassword(oldPassword: CharArray, newPassword: CharArray) {
+        viewModelScope.launch {
+            try {
+                val file = vaultFile ?: throw IllegalStateException("No vault file")
+
+                // Verify old password by attempting decryption
+                repository.decryptVault(file, oldPassword)
+
+                // Re-encrypt with new password
+                repository.saveVault(file, newPassword, encryptionType, vaultMetadata!!, entries.toList())
+
+                // Update in-memory password
+                masterPassword?.fill('\u0000')
+                masterPassword = newPassword.copyOf()
+                oldPassword.fill('\u0000')
+
+                // Invalidate recovery blob (tied to old password)
+                val username = (uiState.value as? VaultUiState.Unlocked)?.username ?: ""
+                if (username.isNotEmpty()) {
+                    repository.deleteRecoveryBlob(username)
+                    _hasRecovery.value = false
+                }
+
+                _changePasswordState.value = ChangePasswordState.Success
+                VaultLogger.i("ViewModel", "Master password changed successfully")
+            } catch (e: Exception) {
+                oldPassword.fill('\u0000')
+                newPassword.fill('\u0000')
+                VaultLogger.e("ViewModel", "Change password failed", e)
+                _changePasswordState.value = ChangePasswordState.Error("Incorrect current password")
+            }
+        }
+    }
+
+    fun resetChangePasswordState() {
+        _changePasswordState.value = ChangePasswordState.Idle
     }
 
     fun generateRecoveryPhrase() {

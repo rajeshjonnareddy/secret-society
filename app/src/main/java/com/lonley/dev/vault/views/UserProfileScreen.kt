@@ -45,7 +45,8 @@ fun UserProfileScreen(
     lastUpdatedAt: Long = 0L,
     settingsState: SettingsState,
     hasRecovery: Boolean = false,
-    onSetupRecovery: () -> Unit = {}
+    onSetupRecovery: () -> Unit = {},
+    onChangePassword: () -> Unit = {}
 ) {
     val lastUpdatedText = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
 
@@ -108,7 +109,8 @@ fun UserProfileScreen(
                         ProfileDivider()
                         ProfileSettingsRow(
                             icon = Icons.Outlined.Key,
-                            title = "Change Master Password"
+                            title = "Change Master Password",
+                            onClick = onChangePassword
                         )
                         ProfileDivider()
                         ProfileSettingsRow(
