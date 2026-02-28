@@ -108,9 +108,33 @@ class VaultRepository(private val filesDir: File) {
         dest
     }
 
+    suspend fun saveRecoveryBlob(username: String, blob: ByteArray) = withContext(Dispatchers.IO) {
+        val file = File(filesDir, ".$username.recovery")
+        file.outputStream().use { it.write(blob) }
+        VaultLogger.i("Repository", "Recovery blob saved: ${file.name} (${blob.size} bytes)")
+    }
+
+    suspend fun loadRecoveryBlob(username: String): ByteArray? = withContext(Dispatchers.IO) {
+        val file = File(filesDir, ".$username.recovery")
+        if (file.exists()) file.readBytes() else null
+    }
+
+    fun hasRecoveryBlob(username: String): Boolean {
+        return File(filesDir, ".$username.recovery").exists()
+    }
+
+    suspend fun deleteRecoveryBlob(username: String) = withContext(Dispatchers.IO) {
+        val file = File(filesDir, ".$username.recovery")
+        if (file.exists()) {
+            val deleted = file.delete()
+            VaultLogger.i("Repository", "Deleted recovery blob: ${file.name} (success=$deleted)")
+        }
+    }
+
     suspend fun deleteAllVaultFiles() = withContext(Dispatchers.IO) {
         val vaultFiles = filesDir.listFiles { file ->
-            file.name.endsWith(".vlt", ignoreCase = true)
+            file.name.endsWith(".vlt", ignoreCase = true) ||
+                file.name.endsWith(".recovery", ignoreCase = true)
         }
         vaultFiles?.forEach { file ->
             val deleted = file.delete()

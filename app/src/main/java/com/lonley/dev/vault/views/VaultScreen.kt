@@ -366,7 +366,7 @@ private fun PasswordEntryItem(
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Edit entry",
-                                tint = MaterialTheme.colorScheme.secondary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }

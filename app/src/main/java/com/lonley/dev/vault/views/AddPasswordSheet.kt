@@ -48,9 +48,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -336,14 +338,18 @@ fun AddPasswordContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val priceDisplayText = if (price.isEmpty()) "" else {
+                    val cents = price.toLongOrNull() ?: 0L
+                    "%.2f".format(cents / 100.0)
+                }
                 OutlinedTextField(
-                    value = if (price.isEmpty()) "" else {
-                        val cents = price.toLongOrNull() ?: 0L
-                        "%.2f".format(cents / 100.0)
-                    },
+                    value = TextFieldValue(
+                        text = priceDisplayText,
+                        selection = TextRange(priceDisplayText.length)
+                    ),
                     onValueChange = { newValue ->
                         onInteraction()
-                        val digitsOnly = newValue.filter { it.isDigit() }
+                        val digitsOnly = newValue.text.filter { it.isDigit() }
                         if (digitsOnly.length <= 7) {
                             price = digitsOnly
                         }

@@ -68,9 +68,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
@@ -386,7 +388,7 @@ fun PasswordDetailScreen(
                                 )
                                 DetailFieldRow(
                                     icon = Icons.Outlined.Repeat,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    iconTint = MaterialTheme.colorScheme.primary,
                                     label = "Plan Type",
                                     value = entry.planType.label
                                 )
@@ -400,7 +402,7 @@ fun PasswordDetailScreen(
                                 )
                                 DetailFieldRow(
                                     icon = Icons.Outlined.AttachMoney,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    iconTint = MaterialTheme.colorScheme.primary,
                                     label = "Price",
                                     value = "$${formatPrice(entry.price)}"
                                 )
@@ -414,7 +416,7 @@ fun PasswordDetailScreen(
                                 )
                                 DetailFieldRow(
                                     icon = Icons.Outlined.Email,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    iconTint = MaterialTheme.colorScheme.primary,
                                     label = "Subscription Email",
                                     value = entry.subscriptionEmail
                                 )
@@ -428,7 +430,7 @@ fun PasswordDetailScreen(
                                 )
                                 DetailFieldRow(
                                     icon = Icons.Outlined.CalendarToday,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    iconTint = MaterialTheme.colorScheme.primary,
                                     label = "Start Date",
                                     value = formatTimestamp(entry.startDate)
                                 )
@@ -443,7 +445,7 @@ fun PasswordDetailScreen(
                                 )
                                 DetailFieldRow(
                                     icon = Icons.Outlined.Event,
-                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    iconTint = MaterialTheme.colorScheme.primary,
                                     label = "Next Renewal",
                                     value = formatTimestamp(nextRenewal)
                                 )
@@ -464,13 +466,13 @@ fun PasswordDetailScreen(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Notifications,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.tertiary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -715,7 +717,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Badge,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 modifier = Modifier
@@ -734,7 +737,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Person,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -752,7 +756,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Email,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -775,7 +780,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 trailingIcon = {
@@ -785,7 +791,8 @@ fun PasswordEditScreen(
                     }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
@@ -805,7 +812,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Language,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -824,7 +832,8 @@ fun PasswordEditScreen(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.Notes,
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -890,13 +899,17 @@ fun PasswordEditScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val priceDisplayText = if (price.isEmpty()) "" else {
+                        val cents = price.toLongOrNull() ?: 0L
+                        "%.2f".format(cents / 100.0)
+                    }
                     OutlinedTextField(
-                        value = if (price.isEmpty()) "" else {
-                            val cents = price.toLongOrNull() ?: 0L
-                            "%.2f".format(cents / 100.0)
-                        },
+                        value = TextFieldValue(
+                            text = priceDisplayText,
+                            selection = TextRange(priceDisplayText.length)
+                        ),
                         onValueChange = { newValue ->
-                            val digitsOnly = newValue.filter { it.isDigit() }
+                            val digitsOnly = newValue.text.filter { it.isDigit() }
                             if (digitsOnly.length <= 7) {
                                 price = digitsOnly
                             }

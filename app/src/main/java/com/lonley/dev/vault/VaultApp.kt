@@ -70,6 +70,7 @@ import android.os.Build
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
+import com.lonley.dev.vault.model.RecoveryState
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.viewmodel.VaultViewModel
@@ -81,6 +82,8 @@ import com.lonley.dev.vault.views.SettingsScreen
 import com.lonley.dev.vault.views.UserProfileScreen
 import com.lonley.dev.vault.views.PasswordGeneratorDialog
 import com.lonley.dev.vault.views.VaultBottomBar
+import com.lonley.dev.vault.views.RecoveryEntryScreen
+import com.lonley.dev.vault.views.RecoveryPhraseScreen
 import com.lonley.dev.vault.views.VaultScreen
 import kotlinx.coroutines.launch
 
@@ -188,14 +191,33 @@ fun VaultApp(viewModel: VaultViewModel) {
         }
 
         is VaultUiState.PromptUnlock -> {
-            ExpressivePasswordDialog(
-                foundVaultFileName = state.fileName,
-                onDismiss = { viewModel.noVault() },
-                onConfirm = { password ->
-                    viewModel.unlockVault(password.toCharArray())
-                },
-                hapticsEnabled = settingsState.hapticsEnabled
-            )
+            val recoveryState by viewModel.recoveryState.collectAsState()
+            val hasRecovery by viewModel.hasRecovery.collectAsState()
+
+            when (recoveryState) {
+                is RecoveryState.PromptEntry, is RecoveryState.Error -> {
+                    RecoveryEntryScreen(
+                        errorMessage = (recoveryState as? RecoveryState.Error)?.message,
+                        hapticsEnabled = settingsState.hapticsEnabled,
+                        onRecover = { words, newPassword ->
+                            viewModel.attemptRecovery(words, newPassword)
+                        },
+                        onCancel = { viewModel.cancelRecovery() }
+                    )
+                }
+                else -> {
+                    ExpressivePasswordDialog(
+                        foundVaultFileName = state.fileName,
+                        onDismiss = { viewModel.noVault() },
+                        onConfirm = { password ->
+                            viewModel.unlockVault(password.toCharArray())
+                        },
+                        hapticsEnabled = settingsState.hapticsEnabled,
+                        showForgotPassword = hasRecovery,
+                        onForgotPassword = { viewModel.startRecoveryFlow() }
+                    )
+                }
+            }
         }
 
         is VaultUiState.Loading -> {
@@ -228,6 +250,10 @@ fun VaultApp(viewModel: VaultViewModel) {
             val clipboardManager = LocalClipboardManager.current
             val isSuspended by viewModel.isSuspended.collectAsState()
             val suspendError by viewModel.suspendError.collectAsState()
+            val recoveryState by viewModel.recoveryState.collectAsState()
+            val hasRecovery by viewModel.hasRecovery.collectAsState()
+            var showRecoveryPrompt by remember { mutableStateOf(false) }
+            var recoveryFromCreation by remember { mutableStateOf(false) }
 
             val copyToClipboard: (String) -> Unit = { text ->
                 viewModel.resetAutoLockTimer()
@@ -238,6 +264,38 @@ fun VaultApp(viewModel: VaultViewModel) {
             val launchDownload = {
                 viewModel.resetAutoLockTimer()
                 downloadLauncher.launch(viewModel.getVaultFileName())
+            }
+
+            // Post-creation recovery prompt
+            LaunchedEffect(state.justCreated) {
+                if (state.justCreated) {
+                    showRecoveryPrompt = true
+                    viewModel.clearJustCreated()
+                }
+            }
+
+            if (showRecoveryPrompt) {
+                AlertDialog(
+                    onDismissRequest = { showRecoveryPrompt = false },
+                    title = { Text("Set Up Recovery Phrase?") },
+                    text = {
+                        Text("Generate a 12-word recovery phrase so you can reset your master password if you forget it.")
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            showRecoveryPrompt = false
+                            recoveryFromCreation = true
+                            viewModel.generateRecoveryPhrase()
+                        }) {
+                            Text("Generate")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showRecoveryPrompt = false }) {
+                            Text("Skip")
+                        }
+                    }
+                )
             }
 
             if (isSuspended) {
@@ -266,6 +324,10 @@ fun VaultApp(viewModel: VaultViewModel) {
             ) {
 
             // Back button handling: navigate back through screen stack
+            BackHandler(enabled = recoveryState is RecoveryState.ShowPhrase) {
+                viewModel.confirmRecoveryPhraseSeen()
+                recoveryFromCreation = false
+            }
             BackHandler(enabled = editingEntry != null) {
                 editingEntry = null
             }
@@ -291,7 +353,9 @@ fun VaultApp(viewModel: VaultViewModel) {
             if (editingEntry != null) lastEditingEntry = editingEntry
 
             // Derive a screen key for animated transitions
+            val showRecoveryPhrase = recoveryState is RecoveryState.ShowPhrase
             val screenKey = when {
+                showRecoveryPhrase -> "recovery"
                 editingEntry != null -> "edit"
                 selectedEntry != null -> "detail"
                 showProfile -> "profile"
@@ -301,7 +365,7 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             // Screen depth for determining slide direction
             val screenDepth = mapOf(
-                "vault" to 0, "profile" to 1, "settings" to 1,
+                "vault" to 0, "profile" to 1, "settings" to 1, "recovery" to 1,
                 "detail" to 2, "edit" to 3
             )
 
@@ -411,6 +475,26 @@ fun VaultApp(viewModel: VaultViewModel) {
                             }
                         )
                     }
+                    "recovery" -> {
+                        val phraseWords = (recoveryState as? RecoveryState.ShowPhrase)?.words ?: emptyList()
+                        RecoveryPhraseScreen(
+                            words = phraseWords,
+                            cancelLabel = if (recoveryFromCreation) "Skip" else "Cancel",
+                            onConfirm = {
+                                viewModel.confirmRecoveryPhraseSeen()
+                                recoveryFromCreation = false
+                                // Navigate to home
+                                showProfile = false
+                                showSettings = false
+                                selectedEntry = null
+                                editingEntry = null
+                            },
+                            onCancel = {
+                                viewModel.confirmRecoveryPhraseSeen()
+                                recoveryFromCreation = false
+                            }
+                        )
+                    }
                     "profile" -> {
                         viewModel.resetAutoLockTimer()
                         UserProfileScreen(
@@ -418,7 +502,12 @@ fun VaultApp(viewModel: VaultViewModel) {
                             email = state.email,
                             encryptionType = state.encryptionType,
                             lastUpdatedAt = state.lastUpdatedAt,
-                            settingsState = settingsState
+                            settingsState = settingsState,
+                            hasRecovery = hasRecovery,
+                            onSetupRecovery = {
+                                recoveryFromCreation = false
+                                viewModel.generateRecoveryPhrase()
+                            }
                         )
                     }
                     "settings" -> {
@@ -567,6 +656,9 @@ fun VaultApp(viewModel: VaultViewModel) {
 
         is VaultUiState.Error -> {
             val isVaultDeleted = state.previous is VaultUiState.Locked
+            val recoveryState by viewModel.recoveryState.collectAsState()
+            val hasRecovery by viewModel.hasRecovery.collectAsState()
+
             if (isVaultDeleted) {
                 AlertDialog(
                     onDismissRequest = { viewModel.dismissError() },
@@ -579,15 +671,31 @@ fun VaultApp(viewModel: VaultViewModel) {
                     }
                 )
             } else {
-                ExpressivePasswordDialog(
-                    foundVaultFileName = (state.previous as? VaultUiState.PromptUnlock)?.fileName ?: "",
-                    onDismiss = { viewModel.dismissError() },
-                    onConfirm = { password ->
-                        viewModel.unlockVault(password.toCharArray())
-                    },
-                    errorMessage = state.message,
-                    hapticsEnabled = settingsState.hapticsEnabled
-                )
+                when (recoveryState) {
+                    is RecoveryState.PromptEntry, is RecoveryState.Error -> {
+                        RecoveryEntryScreen(
+                            errorMessage = (recoveryState as? RecoveryState.Error)?.message,
+                            hapticsEnabled = settingsState.hapticsEnabled,
+                            onRecover = { words, newPassword ->
+                                viewModel.attemptRecovery(words, newPassword)
+                            },
+                            onCancel = { viewModel.cancelRecovery() }
+                        )
+                    }
+                    else -> {
+                        ExpressivePasswordDialog(
+                            foundVaultFileName = (state.previous as? VaultUiState.PromptUnlock)?.fileName ?: "",
+                            onDismiss = { viewModel.dismissError() },
+                            onConfirm = { password ->
+                                viewModel.unlockVault(password.toCharArray())
+                            },
+                            errorMessage = state.message,
+                            hapticsEnabled = settingsState.hapticsEnabled,
+                            showForgotPassword = hasRecovery,
+                            onForgotPassword = { viewModel.startRecoveryFlow() }
+                        )
+                    }
+                }
             }
         }
     }
@@ -600,7 +708,9 @@ fun ExpressivePasswordDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     errorMessage: String? = null,
-    hapticsEnabled: Boolean = false
+    hapticsEnabled: Boolean = false,
+    showForgotPassword: Boolean = false,
+    onForgotPassword: () -> Unit = {}
 ) {
     val view = LocalView.current
     var masterPasswordInput by remember { mutableStateOf("") }
@@ -677,7 +787,24 @@ fun ExpressivePasswordDialog(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                if (showForgotPassword) {
+                    TextButton(
+                        onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
+                            onForgotPassword()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = "Forgot Password?",
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(if (showForgotPassword) 8.dp else 24.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),

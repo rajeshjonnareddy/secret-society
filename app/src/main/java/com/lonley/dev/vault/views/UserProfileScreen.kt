@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +43,9 @@ fun UserProfileScreen(
     email: String,
     encryptionType: String,
     lastUpdatedAt: Long = 0L,
-    settingsState: SettingsState
+    settingsState: SettingsState,
+    hasRecovery: Boolean = false,
+    onSetupRecovery: () -> Unit = {}
 ) {
     val lastUpdatedText = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
 
@@ -94,6 +98,14 @@ fun UserProfileScreen(
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
+                        ProfileSettingsRow(
+                            icon = Icons.Outlined.Shield,
+                            title = "Recovery Phrase",
+                            badge = if (hasRecovery) "Secured" else "Not Secured",
+                            badgeColor = if (hasRecovery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            onClick = if (hasRecovery) null else onSetupRecovery
+                        )
+                        ProfileDivider()
                         ProfileSettingsRow(
                             icon = Icons.Outlined.Key,
                             title = "Change Master Password"
@@ -161,11 +173,15 @@ private fun ProfileInfoRow(label: String, value: String, icon: ImageVector? = nu
 @Composable
 private fun ProfileSettingsRow(
     icon: ImageVector,
-    title: String
+    title: String,
+    badge: String? = null,
+    badgeColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -179,8 +195,17 @@ private fun ProfileSettingsRow(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
+        if (badge != null) {
+            Text(
+                text = badge,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = badgeColor
+            )
+        }
     }
 }
 

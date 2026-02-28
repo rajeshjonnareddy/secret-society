@@ -12,10 +12,23 @@ sealed interface VaultUiState {
         val username: String = "",
         val email: String = "",
         val encryptionType: String = "AES-256-GCM",
-        val lastUpdatedAt: Long = 0L
+        val lastUpdatedAt: Long = 0L,
+        val justCreated: Boolean = false
     ) : VaultUiState
     data object PickFile : VaultUiState
     data class Error(val message: String, val previous: VaultUiState?, val attemptsRemaining: Int = -1) : VaultUiState
+}
+
+sealed interface RecoveryState {
+    data object None : RecoveryState
+    data class ShowPhrase(val words: List<String>) : RecoveryState
+    data object PromptEntry : RecoveryState
+    data class ResetPassword(val recoveredPassword: CharArray) : RecoveryState {
+        override fun equals(other: Any?): Boolean =
+            other is ResetPassword && recoveredPassword.contentEquals(other.recoveredPassword)
+        override fun hashCode(): Int = recoveredPassword.contentHashCode()
+    }
+    data class Error(val message: String) : RecoveryState
 }
 
 sealed interface SaveState {

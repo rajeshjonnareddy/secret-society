@@ -8,8 +8,10 @@ import androidx.lifecycle.viewModelScope
 import com.lonley.dev.vault.data.SettingsPreferences
 import com.lonley.dev.vault.model.AccentColor
 import com.lonley.dev.vault.model.FontScale
+import com.lonley.dev.vault.crypto.RecoveryCrypto
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
+import com.lonley.dev.vault.model.RecoveryState
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.VaultUiState
@@ -129,6 +131,12 @@ class VaultViewModel(
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
 
+    private val _hasRecovery = MutableStateFlow(false)
+    val hasRecovery: StateFlow<Boolean> = _hasRecovery.asStateFlow()
+
+    private val _recoveryState = MutableStateFlow<RecoveryState>(RecoveryState.None)
+    val recoveryState: StateFlow<RecoveryState> = _recoveryState.asStateFlow()
+
     private val _settingsState = MutableStateFlow(settingsPreferences.load())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
 
@@ -208,6 +216,8 @@ class VaultViewModel(
                 val existingFile = repository.findExistingVault()
                 if (existingFile != null) {
                     VaultLogger.i("ViewModel", "Found existing vault: ${existingFile.name}")
+                    val username = existingFile.name.removePrefix(".").removeSuffix(".vlt")
+                    _hasRecovery.value = username.isNotEmpty() && repository.hasRecoveryBlob(username)
                     _uiState.value = VaultUiState.PromptUnlock(existingFile.name)
                 } else {
                     VaultLogger.i("ViewModel", "No existing vault found")
@@ -280,13 +290,15 @@ class VaultViewModel(
                 entries.addAll(repository.parseEntries(metadata))
 
                 val vaultName = metadata.optString("vaultName", "Vault")
+                val username = metadata.optString("username", "")
                 VaultLogger.i("ViewModel", "Vault unlocked: $vaultName, ${entries.size} entries")
                 clearFailedAttempts(fileName)
                 lastUpdatedAt = file.lastModified()
+                _hasRecovery.value = username.isNotEmpty() && repository.hasRecoveryBlob(username)
                 _uiState.value = VaultUiState.Unlocked(
                     vaultName = vaultName,
                     entries = entries.toList(),
-                    username = metadata.optString("username", ""),
+                    username = username,
                     email = metadata.optString("email", ""),
                     encryptionType = encryptionType,
                     lastUpdatedAt = lastUpdatedAt
@@ -343,7 +355,8 @@ class VaultViewModel(
                     entries = emptyList(),
                     username = username,
                     email = email,
-                    encryptionType = encryptionType
+                    encryptionType = encryptionType,
+                    justCreated = true
                 )
                 startAutoLockTimer()
             } catch (e: Exception) {
@@ -548,6 +561,7 @@ class VaultViewModel(
             entries.clear()
             _uiState.value = VaultUiState.Locked
             _saveState.value = SaveState.Idle
+            _recoveryState.value = RecoveryState.None
             VaultLogger.i("ViewModel", "Vault locked and local storage cleared")
         }
     }
@@ -569,6 +583,119 @@ class VaultViewModel(
         autoLockJob?.cancel()
         masterPassword?.fill('\u0000')
         masterPassword = null
+    }
+
+    fun generateRecoveryPhrase() {
+        val pw = masterPassword ?: return
+        viewModelScope.launch {
+            try {
+                val mnemonic = RecoveryCrypto.generateMnemonic()
+                val blob = RecoveryCrypto.createRecoveryBlob(pw, mnemonic)
+                val username = (uiState.value as? VaultUiState.Unlocked)?.username ?: return@launch
+                repository.saveRecoveryBlob(username, blob)
+                _hasRecovery.value = true
+                _recoveryState.value = RecoveryState.ShowPhrase(mnemonic)
+                VaultLogger.i("ViewModel", "Recovery phrase generated for user: $username")
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "Failed to generate recovery phrase", e)
+                _recoveryState.value = RecoveryState.Error("Failed to generate recovery phrase: ${e.message}")
+            }
+        }
+    }
+
+    fun confirmRecoveryPhraseSeen() {
+        _recoveryState.value = RecoveryState.None
+    }
+
+    fun startRecoveryFlow() {
+        _recoveryState.value = RecoveryState.PromptEntry
+    }
+
+    fun attemptRecovery(words: List<String>, newPassword: CharArray) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val fileName = when (currentState) {
+                is VaultUiState.PromptUnlock -> currentState.fileName
+                is VaultUiState.Error -> {
+                    (currentState.previous as? VaultUiState.PromptUnlock)?.fileName
+                }
+                else -> null
+            } ?: return@launch
+
+            try {
+                // Extract username from filename: .username.vlt → username
+                val username = fileName.removePrefix(".").removeSuffix(".vlt")
+                val blob = repository.loadRecoveryBlob(username)
+                    ?: throw IllegalStateException("No recovery data found")
+
+                val recoveredPassword = RecoveryCrypto.recoverMasterPassword(blob, words)
+
+                // Decrypt vault with recovered password
+                val file = repository.findVaultByName(fileName)
+                    ?: throw IllegalStateException("Vault file not found")
+                val metadata = repository.decryptVault(file, recoveredPassword)
+
+                // Re-encrypt vault with new password
+                vaultFile = file
+                encryptionType = metadata.optString("encryptionType", "AES-256-GCM")
+                vaultMetadata = metadata
+                entries.clear()
+                entries.addAll(repository.parseEntries(metadata))
+
+                // Save with new password
+                repository.saveVault(file, newPassword, encryptionType, metadata, entries.toList())
+
+                // Set new password as current
+                masterPassword = newPassword.copyOf()
+
+                // Delete old recovery blob (stale after password change)
+                repository.deleteRecoveryBlob(username)
+                _hasRecovery.value = false
+
+                // Clear recovered password from memory
+                recoveredPassword.fill('\u0000')
+
+                val vaultName = metadata.optString("vaultName", "Vault")
+                clearFailedAttempts(fileName)
+                lastUpdatedAt = file.lastModified()
+                _recoveryState.value = RecoveryState.None
+                _uiState.value = VaultUiState.Unlocked(
+                    vaultName = vaultName,
+                    entries = entries.toList(),
+                    username = metadata.optString("username", ""),
+                    email = metadata.optString("email", ""),
+                    encryptionType = encryptionType,
+                    lastUpdatedAt = lastUpdatedAt
+                )
+                startAutoLockTimer()
+                VaultLogger.i("ViewModel", "Recovery successful — vault unlocked with new password")
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "Recovery failed", e)
+                _recoveryState.value = RecoveryState.Error(
+                    "Recovery failed. Check your 12 words and try again."
+                )
+            }
+        }
+    }
+
+    fun dismissRecoveryError() {
+        _recoveryState.value = RecoveryState.PromptEntry
+    }
+
+    fun cancelRecovery() {
+        _recoveryState.value = RecoveryState.None
+    }
+
+    fun clearJustCreated() {
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked && currentState.justCreated) {
+            _uiState.value = currentState.copy(justCreated = false)
+        }
+    }
+
+    fun hasRecoveryForVault(fileName: String): Boolean {
+        val username = fileName.removePrefix(".").removeSuffix(".vlt")
+        return username.isNotEmpty() && repository.hasRecoveryBlob(username)
     }
 
     class Factory(
