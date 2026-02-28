@@ -23,8 +23,6 @@ import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Subscriptions
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -51,9 +49,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.model.PlanType
@@ -89,8 +85,6 @@ fun AddPasswordContent(
     var password by remember(initialPassword) { mutableStateOf(initialPassword) }
     var website by remember { mutableStateOf("") }
     var comments by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-
     var nameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
@@ -191,17 +185,14 @@ fun AddPasswordContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
+        PasswordTextField(
             value = password,
             onValueChange = { password = it; onInteraction() },
-            label = { Text("Password") },
-            singleLine = true,
+            label = "Password",
             isError = passwordDirty && password.isBlank(),
             supportingText = if (passwordDirty && password.isBlank()) {
                 { Text("Password is required") }
             } else null,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
@@ -209,28 +200,16 @@ fun AddPasswordContent(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            trailingIcon = {
-                Row {
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        showGeneratorDialog = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Password,
-                            contentDescription = "Generate Password",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        passwordVisible = !passwordVisible
-                    }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+            extraTrailingIcon = {
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    showGeneratorDialog = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Password,
+                        contentDescription = "Generate Password",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             },
             modifier = Modifier

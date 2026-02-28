@@ -10,12 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,8 +20,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -38,19 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.os.Build
-import com.lonley.dev.vault.ui.theme.StrengthFair
-import com.lonley.dev.vault.ui.theme.StrengthGood
-import com.lonley.dev.vault.ui.theme.StrengthStrong
-import com.lonley.dev.vault.ui.theme.StrengthWeak
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
 
@@ -67,8 +53,6 @@ fun CreateVaultContent(
     var email by remember { mutableStateOf("") }
     var masterPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
     var masterPasswordFocused by remember { mutableStateOf(false) }
 
     // Dirty tracking — errors show only after the user has left the field
@@ -164,29 +148,14 @@ fun CreateVaultContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Master Password
-        OutlinedTextField(
+        PasswordTextField(
             value = masterPassword,
             onValueChange = { masterPassword = it },
-            label = { Text("Master Password") },
-            singleLine = true,
+            label = "Master Password",
             isError = masterPasswordDirty && masterPassword.isBlank(),
             supportingText = if (masterPasswordDirty && masterPassword.isBlank()) {
                 { Text("Master password is required") }
             } else null,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                IconButton(onClick = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    passwordVisible = !passwordVisible
-                }) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged {
@@ -217,7 +186,6 @@ fun CreateVaultContent(
             }
         }
 
-        // Password strength meter
         if (masterPassword.isNotEmpty()) {
             PasswordStrengthMeter(password = masterPassword)
         }
@@ -225,11 +193,10 @@ fun CreateVaultContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Confirm Password
-        OutlinedTextField(
+        PasswordTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text("Confirm Password") },
-            singleLine = true,
+            label = "Confirm Password",
             isError = confirmPasswordDirty && (confirmPassword.isBlank() || !passwordsMatch),
             supportingText = when {
                 confirmPasswordDirty && confirmPassword.isBlank() -> {
@@ -239,20 +206,6 @@ fun CreateVaultContent(
                     { Text("Passwords do not match") }
                 }
                 else -> null
-            },
-            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                IconButton(onClick = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    confirmPasswordVisible = !confirmPasswordVisible
-                }) {
-                    Icon(
-                        imageVector = if (confirmPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (confirmPasswordVisible) "Hide password" else "Show password",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -341,54 +294,6 @@ fun CreateVaultContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun PasswordStrengthMeter(password: String) {
-    val strength = calculateStrength(password)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        LinearProgressIndicator(
-            progress = { strength.score },
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp),
-            color = strength.color,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap = StrokeCap.Round,
-        )
-        Text(
-            text = strength.label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium,
-            color = strength.color
-        )
-    }
-}
-
-private data class PasswordStrength(val score: Float, val label: String, val color: Color)
-
-private fun calculateStrength(password: String): PasswordStrength {
-    var score = 0
-    if (password.length >= 6) score++
-    if (password.length >= 10) score++
-    if (password.any { it.isUpperCase() }) score++
-    if (password.any { it.isLowerCase() }) score++
-    if (password.any { it.isDigit() }) score++
-    if (password.any { !it.isLetterOrDigit() }) score++
-
-    return when {
-        score <= 2 -> PasswordStrength(0.25f, "Weak", StrengthWeak)
-        score <= 3 -> PasswordStrength(0.5f, "Fair", StrengthFair)
-        score <= 4 -> PasswordStrength(0.75f, "Good", StrengthGood)
-        else -> PasswordStrength(1f, "Strong", StrengthStrong)
     }
 }
 

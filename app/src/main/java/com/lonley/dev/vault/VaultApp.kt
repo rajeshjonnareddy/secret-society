@@ -18,12 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -53,15 +49,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
@@ -78,6 +71,7 @@ import com.lonley.dev.vault.viewmodel.VaultViewModel
 import com.lonley.dev.vault.views.AddPasswordContent
 import com.lonley.dev.vault.views.ChangePasswordScreen
 import com.lonley.dev.vault.views.HomeScreen
+import com.lonley.dev.vault.views.PasswordTextField
 import com.lonley.dev.vault.views.PasswordDetailScreen
 import com.lonley.dev.vault.views.PasswordEditScreen
 import com.lonley.dev.vault.views.SettingsScreen
@@ -752,7 +746,6 @@ fun ExpressivePasswordDialog(
 ) {
     val view = LocalView.current
     var masterPasswordInput by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
     var emptyError by remember { mutableStateOf(false) }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -798,31 +791,16 @@ fun ExpressivePasswordDialog(
                     )
                 }
 
-                OutlinedTextField(
+                PasswordTextField(
                     value = masterPasswordInput,
                     onValueChange = {
                         masterPasswordInput = it
                         if (it.isNotEmpty()) emptyError = false
                     },
-                    label = { Text("Master Password") },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
+                    label = "Master Password",
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
-                    isError = errorMessage != null || emptyError,
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            HapticHelper.performClick(view, hapticsEnabled)
-                            passwordVisible = !passwordVisible
-                        }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                    isError = errorMessage != null || emptyError
                 )
 
                 if (showForgotPassword) {
