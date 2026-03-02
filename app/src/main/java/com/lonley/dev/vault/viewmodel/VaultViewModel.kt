@@ -17,9 +17,11 @@ import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.model.nextRenewalDate
+import com.lonley.dev.vault.notification.VaultNotificationHelper
 import com.lonley.dev.vault.repository.VaultRepository
 import com.lonley.dev.vault.ui.theme.ThemeMode
 import com.lonley.dev.vault.util.VaultLogger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +31,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import android.content.ContentValues
+import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import kotlinx.coroutines.flow.SharingStarted
 import java.io.File
 import java.util.UUID
@@ -201,6 +209,59 @@ class VaultViewModel(
     fun getVaultFileName(): String {
         val name = vaultFile?.name ?: "vault.vlt"
         return if (name.startsWith(".")) name.substring(1) else name
+    }
+
+    fun exportToDownloads(context: Context, fileName: String) {
+        val bytes = getVaultBytes()
+        if (bytes == null) {
+            VaultLogger.w("ViewModel", "No vault data to export")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            VaultNotificationHelper.showExportProgress(context, fileName)
+            try {
+                val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // API 29+ — use MediaStore
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                        put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                        put(MediaStore.Downloads.IS_PENDING, 1)
+                    }
+                    val insertUri = context.contentResolver.insert(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues
+                    ) ?: throw Exception("Failed to create file in Downloads")
+
+                    context.contentResolver.openOutputStream(insertUri)?.use { it.write(bytes) }
+                        ?: throw Exception("Failed to write to Downloads")
+
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                    context.contentResolver.update(insertUri, contentValues, null, null)
+
+                    insertUri
+                } else {
+                    // API 24-28 — use legacy external storage
+                    @Suppress("DEPRECATION")
+                    val downloadsDir = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS
+                    )
+                    downloadsDir.mkdirs()
+                    val outFile = File(downloadsDir, fileName)
+                    outFile.writeBytes(bytes)
+                    Uri.fromFile(outFile)
+                }
+
+                recordExport()
+                VaultNotificationHelper.showExportComplete(context, fileName, uri)
+                VaultLogger.i("ViewModel", "Vault exported to Downloads: $fileName")
+            } catch (e: Exception) {
+                VaultLogger.e("ViewModel", "Export to Downloads failed", e)
+                VaultNotificationHelper.showExportFailed(
+                    context, fileName, e.message ?: "Unknown error"
+                )
+            }
+        }
     }
 
     private var masterPassword: CharArray? = null

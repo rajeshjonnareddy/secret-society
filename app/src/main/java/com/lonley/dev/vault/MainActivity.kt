@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
 
         // Notification channel + WorkManager scheduling
         VaultNotificationHelper.createChannel(applicationContext)
+        VaultNotificationHelper.createExportChannel(applicationContext)
         val renewalCheckRequest = PeriodicWorkRequestBuilder<RenewalCheckWorker>(
             1, TimeUnit.DAYS
         ).build()

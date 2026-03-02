@@ -92,25 +92,6 @@ fun VaultApp(viewModel: VaultViewModel) {
     val themeMode by viewModel.themeMode.collectAsState()
     val settingsState by viewModel.settingsState.collectAsState()
 
-    val downloadLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri ->
-        if (uri != null) {
-            val bytes = viewModel.getVaultBytes()
-            if (bytes != null) {
-                try {
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-                    viewModel.recordExport()
-                    Toast.makeText(context, "Vault saved", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(context, "No vault data to save", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -264,7 +245,7 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             val launchDownload = {
                 viewModel.resetAutoLockTimer()
-                downloadLauncher.launch(viewModel.getVaultFileName())
+                viewModel.exportToDownloads(context, viewModel.getVaultFileName())
             }
 
             // Handle change password success
@@ -651,7 +632,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onClick = {
                                 showExportDialog = false
                                 val fileName = exportFileName.trim().ifEmpty { "vault" }
-                                downloadLauncher.launch("$fileName.vlt")
+                                viewModel.exportToDownloads(context, "$fileName.vlt")
                             },
                             enabled = exportFileName.isNotBlank()
                         ) {

@@ -2,7 +2,10 @@ package com.lonley.dev.vault.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.lonley.dev.vault.R
@@ -10,6 +13,8 @@ import com.lonley.dev.vault.R
 object VaultNotificationHelper {
 
     private const val CHANNEL_ID = "vault_subscription_reminders"
+    private const val EXPORT_CHANNEL_ID = "vault_export"
+    private const val EXPORT_NOTIFICATION_ID = 9001
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -23,6 +28,72 @@ object VaultNotificationHelper {
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
+    }
+
+    fun createExportChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                EXPORT_CHANNEL_ID,
+                "Vault Export",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Notifications for vault file exports"
+            }
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    fun showExportProgress(context: Context, fileName: String) {
+        val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Exporting Vault")
+            .setContentText("Saving $fileName to Downloads…")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setProgress(0, 0, true)
+            .build()
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.notify(EXPORT_NOTIFICATION_ID, notification)
+    }
+
+    fun showExportComplete(context: Context, fileName: String, uri: Uri) {
+        val openIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/octet-stream")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Vault Exported")
+            .setContentText("$fileName saved to Downloads")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setProgress(0, 0, false)
+            .build()
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.notify(EXPORT_NOTIFICATION_ID, notification)
+    }
+
+    fun showExportFailed(context: Context, fileName: String, error: String) {
+        val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Export Failed")
+            .setContentText("Could not save $fileName: $error")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setProgress(0, 0, false)
+            .build()
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.notify(EXPORT_NOTIFICATION_ID, notification)
     }
 
     fun sendRenewalNotification(
