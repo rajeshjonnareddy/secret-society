@@ -36,6 +36,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.util.formatRelativeTime
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun UserProfileScreen(
@@ -43,12 +46,15 @@ fun UserProfileScreen(
     email: String,
     encryptionType: String,
     lastUpdatedAt: Long = 0L,
+    lastExportedAt: Long = 0L,
     settingsState: SettingsState,
     hasRecovery: Boolean = false,
     onSetupRecovery: () -> Unit = {},
-    onChangePassword: () -> Unit = {}
+    onChangePassword: () -> Unit = {},
+    onExportData: () -> Unit = {}
 ) {
     val lastUpdatedText = remember(lastUpdatedAt) { formatRelativeTime(lastUpdatedAt) }
+    val lastExportedText = remember(lastExportedAt) { formatExportTimestamp(lastExportedAt) }
 
     Column(
         modifier = Modifier
@@ -115,7 +121,10 @@ fun UserProfileScreen(
                         ProfileDivider()
                         ProfileSettingsRow(
                             icon = Icons.Outlined.UploadFile,
-                            title = "Export Data"
+                            title = "Export Data",
+                            badge = lastExportedText,
+                            badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            onClick = onExportData
                         )
                     }
                 }
@@ -217,4 +226,10 @@ private fun ProfileDivider() {
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
+}
+
+private fun formatExportTimestamp(timestampMs: Long): String {
+    if (timestampMs == 0L) return "Never"
+    val sdf = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestampMs))
 }

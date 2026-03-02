@@ -141,6 +141,20 @@ class VaultViewModel(
     private val _changePasswordState = MutableStateFlow<ChangePasswordState>(ChangePasswordState.Idle)
     val changePasswordState: StateFlow<ChangePasswordState> = _changePasswordState.asStateFlow()
 
+    private val _lastExportedAt = MutableStateFlow(prefs.getLong("last_exported_at", 0L))
+    val lastExportedAt: StateFlow<Long> = _lastExportedAt.asStateFlow()
+
+    fun recordExport() {
+        val now = System.currentTimeMillis()
+        _lastExportedAt.value = now
+        prefs.edit().putLong("last_exported_at", now).apply()
+        VaultLogger.i("ViewModel", "Vault exported at $now")
+    }
+
+    fun getUsername(): String {
+        return (uiState.value as? VaultUiState.Unlocked)?.username ?: ""
+    }
+
     private val _settingsState = MutableStateFlow(settingsPreferences.load())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
 

@@ -100,6 +100,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             if (bytes != null) {
                 try {
                     context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    viewModel.recordExport()
                     Toast.makeText(context, "Vault saved", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -252,6 +253,8 @@ fun VaultApp(viewModel: VaultViewModel) {
             val changePasswordState by viewModel.changePasswordState.collectAsState()
             var showRecoveryPrompt by remember { mutableStateOf(false) }
             var recoveryFromCreation by remember { mutableStateOf(false) }
+            var showExportDialog by remember { mutableStateOf(false) }
+            val lastExportedAt by viewModel.lastExportedAt.collectAsState()
 
             val copyToClipboard: (String) -> Unit = { text ->
                 viewModel.resetAutoLockTimer()
@@ -529,6 +532,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             email = state.email,
                             encryptionType = state.encryptionType,
                             lastUpdatedAt = state.lastUpdatedAt,
+                            lastExportedAt = lastExportedAt,
                             settingsState = settingsState,
                             hasRecovery = hasRecovery,
                             onSetupRecovery = {
@@ -539,6 +543,10 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 viewModel.resetAutoLockTimer()
                                 showChangePassword = true
                                 showProfile = false
+                            },
+                            onExportData = {
+                                viewModel.resetAutoLockTimer()
+                                showExportDialog = true
                             }
                         )
                     }
@@ -613,6 +621,50 @@ fun VaultApp(viewModel: VaultViewModel) {
                 )
             }
             } // end Box
+
+            if (showExportDialog) {
+                var exportFileName by remember { mutableStateOf(viewModel.getUsername().ifEmpty { "vault" }) }
+                AlertDialog(
+                    onDismissRequest = { showExportDialog = false },
+                    title = { Text("Export Vault") },
+                    text = {
+                        Column {
+                            Text(
+                                text = "Choose a file name for your vault backup.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            OutlinedTextField(
+                                value = exportFileName,
+                                onValueChange = { exportFileName = it },
+                                label = { Text("File name") },
+                                suffix = { Text(".vlt") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showExportDialog = false
+                                val fileName = exportFileName.trim().ifEmpty { "vault" }
+                                downloadLauncher.launch("$fileName.vlt")
+                            },
+                            enabled = exportFileName.isNotBlank()
+                        ) {
+                            Text("Export")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showExportDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
 
             if (showGeneratorDialog) {
                 PasswordGeneratorDialog(

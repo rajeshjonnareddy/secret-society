@@ -13,16 +13,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +48,7 @@ fun RecoveryPhraseScreen(
     onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
+    var wordsRevealed by remember { mutableStateOf(false) }
 
     // Set FLAG_SECURE to prevent screenshots/screen recording
     DisposableEffect(Unit) {
@@ -73,27 +87,60 @@ fun RecoveryPhraseScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // 4 rows × 3 columns grid of numbered word chips
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp)
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            Box {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (!wordsRevealed) Modifier.blur(
+                                16.dp,
+                                edgeTreatment = BlurredEdgeTreatment.Unbounded
+                            ) else Modifier
+                        ),
+                    contentPadding = PaddingValues(16.dp)
                 ) {
-                    for (row in 0 until 4) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            for (col in 0 until 3) {
-                                val index = row * 3 + col
-                                WordChip(
-                                    number = index + 1,
-                                    word = words[index],
-                                    modifier = Modifier.weight(1f)
-                                )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        for (row in 0 until 4) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                for (col in 0 until 3) {
+                                    val index = row * 3 + col
+                                    WordChip(
+                                        number = index + 1,
+                                        word = words[index],
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
+                    }
+                }
+
+                // Show/Hide toggle overlay centered on the blurred card
+                if (!wordsRevealed) {
+                    OutlinedButton(
+                        onClick = { wordsRevealed = true },
+                        modifier = Modifier.align(Alignment.Center),
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Visibility,
+                            contentDescription = "Show keywords",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = "Show Keywords",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
@@ -117,6 +164,7 @@ fun RecoveryPhraseScreen(
 
         Button(
             onClick = onConfirm,
+            enabled = wordsRevealed,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
