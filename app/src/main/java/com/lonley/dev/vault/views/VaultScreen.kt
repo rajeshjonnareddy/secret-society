@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -173,13 +172,6 @@ private fun PasswordEntryItem(
     onEditClick: () -> Unit = {},
     onFavoriteClick: () -> Unit = {}
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val tertiaryColor = MaterialTheme.colorScheme.tertiary
-    val accentGradient = Brush.verticalGradient(listOf(primaryColor, tertiaryColor))
-    val bandGradient = Brush.horizontalGradient(
-        listOf(primaryColor.copy(alpha = 0.15f), tertiaryColor.copy(alpha = 0.05f), Color.Transparent)
-    )
-
     val relativeTime = remember(entry.createdAt) { formatRelativeTime(entry.createdAt, justNowText = "now") }
 
     GlassCard(
@@ -187,25 +179,6 @@ private fun PasswordEntryItem(
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // Left accent gradient strip
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(accentGradient)
-            )
-
-            // Main content with gradient band background
-            Box(modifier = Modifier.weight(1f)) {
-                // Gradient accent band spanning left portion
-                Box(
-                    modifier = Modifier
-                        .width(60.dp)
-                        .fillMaxHeight()
-                        .background(bandGradient)
-                )
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -372,8 +345,6 @@ private fun PasswordEntryItem(
                         }
                     }
                 }
-            }
-        }
     }
 }
 
@@ -566,7 +537,13 @@ fun VaultScreen(
                 text = vaultName.replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    initialDelayMillis = 1000,
+                    repeatDelayMillis = 2000
+                )
             )
 
             Text(

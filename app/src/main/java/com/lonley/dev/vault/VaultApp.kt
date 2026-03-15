@@ -59,7 +59,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
@@ -112,9 +114,18 @@ fun VaultApp(viewModel: VaultViewModel) {
         }
     }
 
+    var pendingExportFileName by remember { mutableStateOf<String?>(null) }
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { /* Permission result - no action needed, best-effort */ }
+    ) { granted ->
+        // Export regardless of whether permission was granted — notification is best-effort
+        val fileName = pendingExportFileName
+        if (fileName != null) {
+            pendingExportFileName = null
+            viewModel.exportToDownloads(context, fileName)
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.initialize()
@@ -245,7 +256,15 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             val launchDownload = {
                 viewModel.resetAutoLockTimer()
-                viewModel.exportToDownloads(context, viewModel.getVaultFileName())
+                val exportName = viewModel.getVaultFileName()
+                val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                if (needsPermission) {
+                    pendingExportFileName = exportName
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    viewModel.exportToDownloads(context, exportName)
+                }
             }
 
             // Handle change password success
@@ -539,6 +558,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onAccentColorChange = { viewModel.setAccentColor(it) },
                             onHapticsToggle = { viewModel.setHapticsEnabled(it) },
                             onFontScaleChange = { viewModel.setFontScale(it) },
+                            onAutoLockTimeoutChange = { viewModel.setAutoLockTimeout(it) },
                             onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) }
                         )
                     }
@@ -631,8 +651,15 @@ fun VaultApp(viewModel: VaultViewModel) {
                         Button(
                             onClick = {
                                 showExportDialog = false
-                                val fileName = exportFileName.trim().ifEmpty { "vault" }
-                                viewModel.exportToDownloads(context, "$fileName.vlt")
+                                val fileName = "${exportFileName.trim().ifEmpty { "vault" }}.vlt"
+                                val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                                if (needsPermission) {
+                                    pendingExportFileName = fileName
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    viewModel.exportToDownloads(context, fileName)
+                                }
                             },
                             enabled = exportFileName.isNotBlank()
                         ) {

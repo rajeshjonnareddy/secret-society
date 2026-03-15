@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -64,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.AccentBlue
@@ -87,6 +89,7 @@ fun SettingsScreen(
     onAccentColorChange: (AccentColor) -> Unit,
     onHapticsToggle: (Boolean) -> Unit,
     onFontScaleChange: (FontScale) -> Unit = {},
+    onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit = {},
     onScrollVibrationToggle: (String, Boolean) -> Unit
 ) {
     val view = LocalView.current
@@ -427,6 +430,98 @@ fun SettingsScreen(
                                 ScrollVibrationCheckbox("Settings", "settings", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Password Detail", "passwordDetail", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Edit Entry", "editEntry", settingsState, onScrollVibrationToggle)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Security ──
+                SectionHeader("Security")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        var autoLockExpanded by remember { mutableStateOf(false) }
+                        val autoLockChevronRotation by animateFloatAsState(
+                            targetValue = if (autoLockExpanded) 180f else 0f,
+                            label = "autoLockChevron"
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                    autoLockExpanded = !autoLockExpanded
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Auto-Lock",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = settingsState.autoLockTimeout.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ExpandMore,
+                                contentDescription = if (autoLockExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.rotate(autoLockChevronRotation)
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = autoLockExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                            ) {
+                                AutoLockTimeout.entries.forEach { timeout ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onAutoLockTimeoutChange(timeout)
+                                            }
+                                    ) {
+                                        RadioButton(
+                                            selected = settingsState.autoLockTimeout == timeout,
+                                            onClick = {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onAutoLockTimeoutChange(timeout)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = timeout.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

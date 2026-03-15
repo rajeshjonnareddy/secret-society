@@ -32,24 +32,26 @@ object VaultNotificationHelper {
 
     fun createExportChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            // Delete old channel in case it was created with IMPORTANCE_LOW
+            manager.deleteNotificationChannel(EXPORT_CHANNEL_ID)
             val channel = NotificationChannel(
                 EXPORT_CHANNEL_ID,
                 "Vault Export",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notifications for vault file exports"
             }
-            val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
     fun showExportProgress(context: Context, fileName: String) {
         val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Exporting Vault")
             .setContentText("Saving $fileName to Downloads…")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setOngoing(true)
             .setProgress(0, 0, true)
             .build()
@@ -69,10 +71,10 @@ object VaultNotificationHelper {
         )
 
         val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Vault Exported")
             .setContentText("$fileName saved to Downloads")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setProgress(0, 0, false)
@@ -84,7 +86,7 @@ object VaultNotificationHelper {
 
     fun showExportFailed(context: Context, fileName: String, error: String) {
         val notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Export Failed")
             .setContentText("Could not save $fileName: $error")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -109,7 +111,7 @@ object VaultNotificationHelper {
         }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Subscription Reminder")
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

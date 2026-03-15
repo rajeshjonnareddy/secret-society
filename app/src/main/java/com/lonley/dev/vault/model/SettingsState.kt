@@ -13,12 +13,21 @@ enum class FontScale(val factor: Float) {
     ExtraLarge(1.4f)
 }
 
+enum class AutoLockTimeout(val millis: Long, val label: String) {
+    EveryUpdate(0L, "Every UI Update"),
+    OneMinute(60_000L, "1 Minute"),
+    TwoMinutes(120_000L, "2 Minutes"),
+    FiveMinutes(300_000L, "5 Minutes"),
+    Never(-1L, "Never")
+}
+
 data class SettingsState(
     val themeMode: ThemeMode = ThemeMode.System,
     val accentColor: AccentColor = AccentColor.Auto,
     val language: String = "English",
     val hapticsEnabled: Boolean = true,
     val fontScale: FontScale = FontScale.Default,
+    val autoLockTimeout: AutoLockTimeout = AutoLockTimeout.OneMinute,
     val scrollVibrations: Map<String, Boolean> = mapOf(
         "home" to false,
         "vault" to false,

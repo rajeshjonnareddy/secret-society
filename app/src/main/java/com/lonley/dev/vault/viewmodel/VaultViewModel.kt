@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.lonley.dev.vault.data.SettingsPreferences
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.crypto.RecoveryCrypto
 import com.lonley.dev.vault.model.PasswordEntry
@@ -69,8 +70,10 @@ class VaultViewModel(
 
     private fun startAutoLockTimer() {
         autoLockJob?.cancel()
+        val timeout = _settingsState.value.autoLockTimeout
+        if (timeout == AutoLockTimeout.Never || timeout == AutoLockTimeout.EveryUpdate) return
         autoLockJob = viewModelScope.launch {
-            delay(60_000L)
+            delay(timeout.millis)
             if (_uiState.value is VaultUiState.Unlocked) {
                 VaultLogger.i("ViewModel", "Inactivity timeout — suspending vault")
                 suspendVault()
@@ -194,6 +197,13 @@ class VaultViewModel(
 
     fun setFontScale(scale: FontScale) {
         updateSettings { it.copy(fontScale = scale) }
+    }
+
+    fun setAutoLockTimeout(timeout: AutoLockTimeout) {
+        updateSettings { it.copy(autoLockTimeout = timeout) }
+        if (_uiState.value is VaultUiState.Unlocked) {
+            startAutoLockTimer()
+        }
     }
 
     private fun updateSettings(transform: (SettingsState) -> SettingsState) {
@@ -594,6 +604,10 @@ class VaultViewModel(
             try {
                 repository.saveVault(file, pw, algorithm, metadata, snapshot)
                 _saveState.value = SaveState.SaveSuccess
+                if (_settingsState.value.autoLockTimeout == AutoLockTimeout.EveryUpdate) {
+                    VaultLogger.i("ViewModel", "EveryUpdate auto-lock — suspending vault after save")
+                    suspendVault()
+                }
             } catch (e: Exception) {
                 VaultLogger.e("ViewModel", "Save failed", e)
                 _saveState.value = SaveState.SaveError("Failed to save: ${e.message}")

@@ -2,6 +2,7 @@ package com.lonley.dev.vault.data
 
 import android.content.SharedPreferences
 import com.lonley.dev.vault.model.AccentColor
+import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.ui.theme.ThemeMode
@@ -30,6 +31,12 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             FontScale.Default
         }
 
+        val autoLockTimeout = try {
+            AutoLockTimeout.valueOf(prefs.getString(KEY_AUTO_LOCK_TIMEOUT, AutoLockTimeout.OneMinute.name)!!)
+        } catch (_: Exception) {
+            AutoLockTimeout.OneMinute
+        }
+
         val scrollVibrations = mapOf(
             "home" to prefs.getBoolean(KEY_SCROLL_HOME, false),
             "vault" to prefs.getBoolean(KEY_SCROLL_VAULT, false),
@@ -44,6 +51,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             language = language,
             hapticsEnabled = hapticsEnabled,
             fontScale = fontScale,
+            autoLockTimeout = autoLockTimeout,
             scrollVibrations = scrollVibrations
         )
     }
@@ -55,6 +63,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             .putString(KEY_LANGUAGE, state.language)
             .putBoolean(KEY_HAPTICS, state.hapticsEnabled)
             .putString(KEY_FONT_SCALE, state.fontScale.name)
+            .putString(KEY_AUTO_LOCK_TIMEOUT, state.autoLockTimeout.name)
             .putBoolean(KEY_SCROLL_HOME, state.scrollVibrations["home"] ?: false)
             .putBoolean(KEY_SCROLL_VAULT, state.scrollVibrations["vault"] ?: false)
             .putBoolean(KEY_SCROLL_SETTINGS, state.scrollVibrations["settings"] ?: false)
@@ -74,5 +83,6 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         private const val KEY_SCROLL_PASSWORD_DETAIL = "scroll_vibration_password_detail"
         private const val KEY_SCROLL_EDIT_ENTRY = "scroll_vibration_edit_entry"
         private const val KEY_FONT_SCALE = "font_scale"
+        private const val KEY_AUTO_LOCK_TIMEOUT = "auto_lock_timeout"
     }
 }
