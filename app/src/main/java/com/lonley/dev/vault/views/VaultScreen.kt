@@ -176,11 +176,40 @@ private fun PasswordEntryItem(
 ) {
     val relativeTime = remember(entry.createdAt) { formatRelativeTime(entry.createdAt, justNowText = "now") }
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    val cardGradient = Brush.linearGradient(
+        colors = listOf(
+            primaryColor.copy(alpha = 0.12f),
+            tertiaryColor.copy(alpha = 0.08f),
+            Color.Transparent
+        ),
+        start = Offset(0f, Float.POSITIVE_INFINITY),
+        end = Offset(Float.POSITIVE_INFINITY, 0f)
+    )
+    val shineGradient = Brush.radialGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.10f),
+            Color.Transparent
+        ),
+        center = Offset(Float.POSITIVE_INFINITY, 0f),
+        radius = 200f
+    )
+
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
+                // Credit card background layers
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(cardGradient)
+                        .background(shineGradient)
+                )
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -200,7 +229,7 @@ private fun PasswordEntryItem(
                                 text = entry.name.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -217,7 +246,7 @@ private fun PasswordEntryItem(
                                         if (entry.username?.isNotBlank() == true) "@$displayIdentifier" else displayIdentifier
                                     } else "",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.secondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f)
@@ -231,14 +260,14 @@ private fun PasswordEntryItem(
                                                 text = "$${formatPrice(entry.price)}",
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = MaterialTheme.colorScheme.tertiary
                                             )
                                         }
                                         if (entry.planType != null) {
                                             Text(
                                                 text = entry.planType.label,
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
                                             )
                                         }
                                     }
@@ -293,7 +322,7 @@ private fun PasswordEntryItem(
                             Text(
                                 text = "\u2022".repeat(8),
                                 style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 2.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.30f)
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
