@@ -21,6 +21,13 @@ enum class AutoLockTimeout(val millis: Long, val label: String) {
     Never(-1L, "Never")
 }
 
+enum class SwipeAction(val label: String) {
+    Delete("Delete"),
+    Edit("Edit"),
+    CopyPassword("Copy Password"),
+    ToggleFavorite("Toggle Favorite")
+}
+
 data class SettingsState(
     val themeMode: ThemeMode = ThemeMode.System,
     val accentColor: AccentColor = AccentColor.Auto,
@@ -34,5 +41,7 @@ data class SettingsState(
         "settings" to false,
         "passwordDetail" to false,
         "editEntry" to false
-    )
+    ),
+    val swipeLeftAction: SwipeAction = SwipeAction.Edit,
+    val swipeRightAction: SwipeAction = SwipeAction.CopyPassword
 )

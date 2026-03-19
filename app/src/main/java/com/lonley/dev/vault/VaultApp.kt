@@ -559,7 +559,9 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onHapticsToggle = { viewModel.setHapticsEnabled(it) },
                             onFontScaleChange = { viewModel.setFontScale(it) },
                             onAutoLockTimeoutChange = { viewModel.setAutoLockTimeout(it) },
-                            onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) }
+                            onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
+                            onSwipeLeftActionChange = { viewModel.setSwipeLeftAction(it) },
+                            onSwipeRightActionChange = { viewModel.setSwipeRightAction(it) }
                         )
                     }
                     else -> {
@@ -584,6 +586,10 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onToggleFavorite = { entry ->
                                 viewModel.resetAutoLockTimer()
                                 viewModel.toggleFavorite(entry.id)
+                            },
+                            onDeleteEntry = { entry ->
+                                viewModel.resetAutoLockTimer()
+                                viewModel.deletePassword(entry.id)
                             }
                         )
                     }

@@ -68,6 +68,7 @@ import com.lonley.dev.vault.model.AccentColor
 import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.SettingsState
+import com.lonley.dev.vault.model.SwipeAction
 import com.lonley.dev.vault.ui.theme.AccentBlue
 import com.lonley.dev.vault.ui.theme.AccentGray
 import com.lonley.dev.vault.ui.theme.AccentGreen
@@ -90,7 +91,9 @@ fun SettingsScreen(
     onHapticsToggle: (Boolean) -> Unit,
     onFontScaleChange: (FontScale) -> Unit = {},
     onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit = {},
-    onScrollVibrationToggle: (String, Boolean) -> Unit
+    onScrollVibrationToggle: (String, Boolean) -> Unit,
+    onSwipeLeftActionChange: (SwipeAction) -> Unit = {},
+    onSwipeRightActionChange: (SwipeAction) -> Unit = {}
 ) {
     val view = LocalView.current
 
@@ -430,6 +433,181 @@ fun SettingsScreen(
                                 ScrollVibrationCheckbox("Settings", "settings", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Password Detail", "passwordDetail", settingsState, onScrollVibrationToggle)
                                 ScrollVibrationCheckbox("Edit Entry", "editEntry", settingsState, onScrollVibrationToggle)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Gestures ──
+                SectionHeader("Gestures")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Swipe Left
+                        var swipeLeftExpanded by remember { mutableStateOf(false) }
+                        val swipeLeftChevronRotation by animateFloatAsState(
+                            targetValue = if (swipeLeftExpanded) 180f else 0f,
+                            label = "swipeLeftChevron"
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                    swipeLeftExpanded = !swipeLeftExpanded
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.SwipeDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Swipe Left",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = settingsState.swipeLeftAction.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ExpandMore,
+                                contentDescription = if (swipeLeftExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.rotate(swipeLeftChevronRotation)
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = swipeLeftExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                            ) {
+                                SwipeAction.entries.forEach { action ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onSwipeLeftActionChange(action)
+                                            }
+                                    ) {
+                                        RadioButton(
+                                            selected = settingsState.swipeLeftAction == action,
+                                            onClick = {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onSwipeLeftActionChange(action)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = action.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingsDivider()
+
+                        // Swipe Right
+                        var swipeRightExpanded by remember { mutableStateOf(false) }
+                        val swipeRightChevronRotation by animateFloatAsState(
+                            targetValue = if (swipeRightExpanded) 180f else 0f,
+                            label = "swipeRightChevron"
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                    swipeRightExpanded = !swipeRightExpanded
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.SwipeDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Swipe Right",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = settingsState.swipeRightAction.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ExpandMore,
+                                contentDescription = if (swipeRightExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.rotate(swipeRightChevronRotation)
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = swipeRightExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                            ) {
+                                SwipeAction.entries.forEach { action ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onSwipeRightActionChange(action)
+                                            }
+                                    ) {
+                                        RadioButton(
+                                            selected = settingsState.swipeRightAction == action,
+                                            onClick = {
+                                                HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                                onSwipeRightActionChange(action)
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = action.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

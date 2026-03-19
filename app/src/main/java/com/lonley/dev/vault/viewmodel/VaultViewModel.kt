@@ -16,6 +16,7 @@ import com.lonley.dev.vault.model.RecoveryState
 import com.lonley.dev.vault.model.ChangePasswordState
 import com.lonley.dev.vault.model.SaveState
 import com.lonley.dev.vault.model.SettingsState
+import com.lonley.dev.vault.model.SwipeAction
 import com.lonley.dev.vault.model.VaultUiState
 import com.lonley.dev.vault.model.nextRenewalDate
 import com.lonley.dev.vault.notification.VaultNotificationHelper
@@ -204,6 +205,14 @@ class VaultViewModel(
         if (_uiState.value is VaultUiState.Unlocked) {
             startAutoLockTimer()
         }
+    }
+
+    fun setSwipeLeftAction(action: SwipeAction) {
+        updateSettings { it.copy(swipeLeftAction = action) }
+    }
+
+    fun setSwipeRightAction(action: SwipeAction) {
+        updateSettings { it.copy(swipeRightAction = action) }
     }
 
     private fun updateSettings(transform: (SettingsState) -> SettingsState) {

@@ -1,9 +1,11 @@
 package com.lonley.dev.vault.views
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -29,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -47,14 +50,23 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +80,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.lonley.dev.vault.ui.theme.LocalGlassColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalView
@@ -79,6 +92,7 @@ import kotlinx.coroutines.flow.drop
 import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
+import com.lonley.dev.vault.model.SwipeAction
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.util.formatRelativeTime
@@ -166,13 +180,16 @@ private fun SearchGlassBar(
 
 // ── Password entry card using glass style ──
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PasswordEntryItem(
     entry: PasswordEntry,
     onClick: () -> Unit = {},
+    onLongPress: () -> Unit = {},
     onCopyClick: () -> Unit = {},
     onEditClick: () -> Unit = {},
-    onFavoriteClick: () -> Unit = {}
+    onFavoriteClick: () -> Unit = {},
+    onDeleteClick: () -> Unit = {}
 ) {
     val relativeTime = remember(entry.createdAt) { formatRelativeTime(entry.createdAt, justNowText = "now") }
 
@@ -200,7 +217,10 @@ private fun PasswordEntryItem(
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
     ) {
                 // Credit card background layers
                 Box(
@@ -497,6 +517,131 @@ private fun DashboardStatsRow(
     }
 }
 
+// ── Swipe action helpers ──
+
+private data class SwipeActionVisuals(
+    val color: Color,
+    val icon: ImageVector,
+    val description: String
+)
+
+private fun swipeActionVisuals(action: SwipeAction): SwipeActionVisuals = when (action) {
+    SwipeAction.Delete -> SwipeActionVisuals(Color(0xFFE53935), Icons.Default.Delete, "Delete")
+    SwipeAction.Edit -> SwipeActionVisuals(Color(0xFF1E88E5), Icons.Default.Edit, "Edit")
+    SwipeAction.CopyPassword -> SwipeActionVisuals(Color(0xFF43A047), Icons.Default.ContentCopy, "Copy Password")
+    SwipeAction.ToggleFavorite -> SwipeActionVisuals(Color(0xFFFFC107), Icons.Default.Star, "Toggle Favorite")
+}
+
+@Composable
+private fun SwipeBackground(
+    action: SwipeAction,
+    direction: SwipeToDismissBoxValue,
+    progress: Float
+) {
+    val visuals = swipeActionVisuals(action)
+    val parentAlignment = when (direction) {
+        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+        else -> return
+    }
+
+    // Clamp progress so the background only covers the revealed portion
+    val fraction = progress.coerceIn(0f, 1f)
+    if (fraction == 0f) return
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = parentAlignment
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(16.dp))
+                .background(visuals.color)
+                .padding(horizontal = 24.dp),
+            contentAlignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }
+        ) {
+            Icon(
+                imageVector = visuals.icon,
+                contentDescription = visuals.description,
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeablePasswordCard(
+    entry: PasswordEntry,
+    swipeLeftAction: SwipeAction,
+    swipeRightAction: SwipeAction,
+    onSwipeAction: (SwipeAction) -> Unit,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    onCopyClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onSwipeAction(swipeRightAction)
+                    false // snap back
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onSwipeAction(swipeLeftAction)
+                    false // snap back
+                }
+                else -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val rawProgress = dismissState.progress
+            val current = dismissState.currentValue
+            val target = dismissState.targetValue
+            val isSettled = current == SwipeToDismissBoxValue.Settled &&
+                    target == SwipeToDismissBoxValue.Settled
+            val isSnappingBack = current != SwipeToDismissBoxValue.Settled &&
+                    target == SwipeToDismissBoxValue.Settled
+
+            val fraction = when {
+                isSettled -> 0f
+                isSnappingBack -> (1f - rawProgress).coerceIn(0f, 1f)
+                else -> rawProgress.coerceIn(0f, 1f)
+            }
+
+            when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> SwipeBackground(swipeRightAction, SwipeToDismissBoxValue.StartToEnd, fraction)
+                SwipeToDismissBoxValue.EndToStart -> SwipeBackground(swipeLeftAction, SwipeToDismissBoxValue.EndToStart, fraction)
+                else -> Box(Modifier.fillMaxSize())
+            }
+        }
+    ) {
+        PasswordEntryItem(
+            entry = entry,
+            onClick = onClick,
+            onLongPress = onLongPress,
+            onCopyClick = onCopyClick,
+            onEditClick = onEditClick,
+            onFavoriteClick = onFavoriteClick,
+            onDeleteClick = onDeleteClick
+        )
+    }
+}
+
 // ── Main screen ──
 
 @Composable
@@ -509,7 +654,8 @@ fun VaultScreen(
     onEntryClick: (PasswordEntry) -> Unit = {},
     onCopyPassword: (PasswordEntry) -> Unit = {},
     onEditEntry: (PasswordEntry) -> Unit = {},
-    onToggleFavorite: (PasswordEntry) -> Unit = {}
+    onToggleFavorite: (PasswordEntry) -> Unit = {},
+    onDeleteEntry: (PasswordEntry) -> Unit = {}
 ) {
     val view = LocalView.current
     val listState = rememberLazyListState()
@@ -811,25 +957,125 @@ fun VaultScreen(
                         items = filteredEntries,
                         key = { it.id }
                     ) { entry ->
-                        PasswordEntryItem(
-                            entry = entry,
-                            onClick = {
-                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                onEntryClick(entry)
-                            },
-                            onCopyClick = {
-                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                onCopyPassword(entry)
-                            },
-                            onEditClick = {
-                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                onEditEntry(entry)
-                            },
-                            onFavoriteClick = {
-                                HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                onToggleFavorite(entry)
+                        var showContextMenu by remember { mutableStateOf(false) }
+                        var showDeleteDialog by remember { mutableStateOf(false) }
+
+                        val executeSwipeAction: (SwipeAction) -> Unit = { action ->
+                            HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                            when (action) {
+                                SwipeAction.Delete -> showDeleteDialog = true
+                                SwipeAction.Edit -> onEditEntry(entry)
+                                SwipeAction.CopyPassword -> onCopyPassword(entry)
+                                SwipeAction.ToggleFavorite -> onToggleFavorite(entry)
                             }
-                        )
+                        }
+
+                        Box {
+                            SwipeablePasswordCard(
+                                entry = entry,
+                                swipeLeftAction = settingsState?.swipeLeftAction ?: SwipeAction.Edit,
+                                swipeRightAction = settingsState?.swipeRightAction ?: SwipeAction.CopyPassword,
+                                onSwipeAction = executeSwipeAction,
+                                onClick = {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    onEntryClick(entry)
+                                },
+                                onLongPress = {
+                                    HapticHelper.performLongPress(view, settingsState?.hapticsEnabled == true)
+                                    showContextMenu = true
+                                },
+                                onCopyClick = {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    onCopyPassword(entry)
+                                },
+                                onEditClick = {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    onEditEntry(entry)
+                                },
+                                onFavoriteClick = {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    onToggleFavorite(entry)
+                                },
+                                onDeleteClick = {
+                                    showDeleteDialog = true
+                                }
+                            )
+
+                            DropdownMenu(
+                                expanded = showContextMenu,
+                                onDismissRequest = { showContextMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Copy Password") },
+                                    onClick = {
+                                        showContextMenu = false
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onCopyPassword(entry)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.ContentCopy, contentDescription = null)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Edit") },
+                                    onClick = {
+                                        showContextMenu = false
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onEditEntry(entry)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Edit, contentDescription = null)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        showContextMenu = false
+                                        showDeleteDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Delete, contentDescription = null)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (entry.isFavorite) "Remove Favorite" else "Add Favorite") },
+                                    onClick = {
+                                        showContextMenu = false
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onToggleFavorite(entry)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        if (showDeleteDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showDeleteDialog = false },
+                                title = { Text("Delete Entry") },
+                                text = { Text("Are you sure you want to delete \"${entry.name}\"? This cannot be undone.") },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            showDeleteDialog = false
+                                            onDeleteEntry(entry)
+                                        }
+                                    ) {
+                                        Text("Delete")
+                                    }
+                                },
+                                dismissButton = {
+                                    OutlinedButton(onClick = { showDeleteDialog = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            )
+                        }
                     }
                     item {
                         Spacer(modifier = Modifier.height(120.dp))

@@ -22,4 +22,13 @@ object HapticHelper {
             )
         }
     }
+
+    fun performLongPress(view: View, enabled: Boolean) {
+        if (enabled) {
+            view.performHapticFeedback(
+                HapticFeedbackConstants.LONG_PRESS,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+            )
+        }
+    }
 }
