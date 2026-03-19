@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -182,6 +184,7 @@ private fun PasswordEntryItem(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -189,8 +192,7 @@ private fun PasswordEntryItem(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
+                            .fillMaxHeight()
                     ) {
                         // Primary zone: name + username with subscription info
                         Column {
@@ -243,6 +245,8 @@ private fun PasswordEntryItem(
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.weight(1f))
 
                         // Subtle divider + Secondary info row (pinned to bottom)
                         Column {

@@ -44,7 +44,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +82,8 @@ fun AddPasswordContent(
     onInteraction: () -> Unit = {}
 ) {
     val view = LocalView.current
+    val focusManager = LocalFocusManager.current
+    val dateFocusRequester = remember { FocusRequester() }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -371,6 +376,7 @@ fun AddPasswordContent(
                 // Start date button
                 val dateText = if (startDate != null) {
                     val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
                     sdf.format(java.util.Date(startDate!!))
                 } else "Select Start Date"
 
@@ -389,6 +395,7 @@ fun AddPasswordContent(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(dateFocusRequester)
                         .onFocusChanged { if (it.isFocused) showDatePicker = true },
                     shape = fieldShape
                 )
@@ -498,18 +505,25 @@ fun AddPasswordContent(
             initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
         )
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = {
+                showDatePicker = false
+                focusManager.clearFocus()
+            },
             confirmButton = {
                 TextButton(onClick = {
                     startDate = datePickerState.selectedDateMillis
                     showDatePicker = false
+                    focusManager.clearFocus()
                     onInteraction()
                 }) {
                     Text("OK")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    focusManager.clearFocus()
+                }) {
                     Text("Cancel")
                 }
             }

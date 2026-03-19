@@ -64,7 +64,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
@@ -85,6 +88,7 @@ import com.lonley.dev.vault.util.HapticHelper
 
 private fun formatTimestamp(epochMs: Long): String {
     val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
     return sdf.format(java.util.Date(epochMs))
 }
 
@@ -606,6 +610,8 @@ fun PasswordEditScreen(
     onToggleFavorite: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
+    val focusManager = LocalFocusManager.current
+    val dateFocusRequester = remember { FocusRequester() }
     var passwordVisible by remember { mutableStateOf(false) }
 
     var name by remember(entry) { mutableStateOf(entry.name) }
@@ -952,6 +958,7 @@ fun PasswordEditScreen(
                     // Start date
                     val dateText = if (startDate != null) {
                         val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
                         sdf.format(java.util.Date(startDate!!))
                     } else "Select Start Date"
 
@@ -970,6 +977,7 @@ fun PasswordEditScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .focusRequester(dateFocusRequester)
                             .onFocusChanged { if (it.isFocused) showDatePicker = true },
                         shape = fieldShape
                     )
@@ -1067,17 +1075,24 @@ fun PasswordEditScreen(
             initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
         )
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = {
+                showDatePicker = false
+                focusManager.clearFocus()
+            },
             confirmButton = {
                 TextButton(onClick = {
                     startDate = datePickerState.selectedDateMillis
                     showDatePicker = false
+                    focusManager.clearFocus()
                 }) {
                     Text("OK")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    focusManager.clearFocus()
+                }) {
                     Text("Cancel")
                 }
             }
