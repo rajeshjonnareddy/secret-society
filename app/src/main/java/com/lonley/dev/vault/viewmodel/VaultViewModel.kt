@@ -207,6 +207,10 @@ class VaultViewModel(
         }
     }
 
+    fun setSwipeActionsEnabled(enabled: Boolean) {
+        updateSettings { it.copy(swipeActionsEnabled = enabled) }
+    }
+
     fun setSwipeLeftAction(action: SwipeAction) {
         updateSettings { it.copy(swipeLeftAction = action) }
     }

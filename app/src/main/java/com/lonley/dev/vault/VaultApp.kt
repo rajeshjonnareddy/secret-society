@@ -560,6 +560,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onFontScaleChange = { viewModel.setFontScale(it) },
                             onAutoLockTimeoutChange = { viewModel.setAutoLockTimeout(it) },
                             onScrollVibrationToggle = { screen, enabled -> viewModel.setScrollVibration(screen, enabled) },
+                            onSwipeActionsToggle = { viewModel.setSwipeActionsEnabled(it) },
                             onSwipeLeftActionChange = { viewModel.setSwipeLeftAction(it) },
                             onSwipeRightActionChange = { viewModel.setSwipeRightAction(it) }
                         )

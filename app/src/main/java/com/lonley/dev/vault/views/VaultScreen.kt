@@ -971,35 +971,64 @@ fun VaultScreen(
                         }
 
                         Box {
-                            SwipeablePasswordCard(
-                                entry = entry,
-                                swipeLeftAction = settingsState?.swipeLeftAction ?: SwipeAction.Edit,
-                                swipeRightAction = settingsState?.swipeRightAction ?: SwipeAction.CopyPassword,
-                                onSwipeAction = executeSwipeAction,
-                                onClick = {
-                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                    onEntryClick(entry)
-                                },
-                                onLongPress = {
-                                    HapticHelper.performLongPress(view, settingsState?.hapticsEnabled == true)
-                                    showContextMenu = true
-                                },
-                                onCopyClick = {
-                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                    onCopyPassword(entry)
-                                },
-                                onEditClick = {
-                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                    onEditEntry(entry)
-                                },
-                                onFavoriteClick = {
-                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                    onToggleFavorite(entry)
-                                },
-                                onDeleteClick = {
-                                    showDeleteDialog = true
-                                }
-                            )
+                            if (settingsState?.swipeActionsEnabled != false) {
+                                SwipeablePasswordCard(
+                                    entry = entry,
+                                    swipeLeftAction = settingsState?.swipeLeftAction ?: SwipeAction.Edit,
+                                    swipeRightAction = settingsState?.swipeRightAction ?: SwipeAction.CopyPassword,
+                                    onSwipeAction = executeSwipeAction,
+                                    onClick = {
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onEntryClick(entry)
+                                    },
+                                    onLongPress = {
+                                        HapticHelper.performLongPress(view, settingsState?.hapticsEnabled == true)
+                                        showContextMenu = true
+                                    },
+                                    onCopyClick = {
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onCopyPassword(entry)
+                                    },
+                                    onEditClick = {
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onEditEntry(entry)
+                                    },
+                                    onFavoriteClick = {
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        onToggleFavorite(entry)
+                                    },
+                                    onDeleteClick = {
+                                        showDeleteDialog = true
+                                    }
+                                )
+                            } else {
+                                PasswordEntryItem(
+                                    entry = entry,
+                                    onClick = {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        onEntryClick(entry)
+                                    },
+                                    onLongPress = {
+                                        HapticHelper.performLongPress(view, settingsState.hapticsEnabled)
+                                        showContextMenu = true
+                                    },
+                                    onCopyClick = {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        onCopyPassword(entry)
+                                    },
+                                    onEditClick = {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        onEditEntry(entry)
+                                    },
+                                    onFavoriteClick = {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        onToggleFavorite(entry)
+                                    },
+                                    onDeleteClick = {
+                                        showDeleteDialog = true
+                                    }
+                                )
+                            }
 
                             DropdownMenu(
                                 expanded = showContextMenu,

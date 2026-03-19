@@ -42,6 +42,7 @@ data class SettingsState(
         "passwordDetail" to false,
         "editEntry" to false
     ),
+    val swipeActionsEnabled: Boolean = true,
     val swipeLeftAction: SwipeAction = SwipeAction.Edit,
     val swipeRightAction: SwipeAction = SwipeAction.CopyPassword
 )

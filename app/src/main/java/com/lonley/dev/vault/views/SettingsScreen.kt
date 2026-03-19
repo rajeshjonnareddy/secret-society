@@ -92,6 +92,7 @@ fun SettingsScreen(
     onFontScaleChange: (FontScale) -> Unit = {},
     onAutoLockTimeoutChange: (AutoLockTimeout) -> Unit = {},
     onScrollVibrationToggle: (String, Boolean) -> Unit,
+    onSwipeActionsToggle: (Boolean) -> Unit = {},
     onSwipeLeftActionChange: (SwipeAction) -> Unit = {},
     onSwipeRightActionChange: (SwipeAction) -> Unit = {}
 ) {
@@ -449,20 +450,42 @@ fun SettingsScreen(
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
+                        // Swipe Actions master toggle
+                        val swipeOn = settingsState.swipeActionsEnabled
+                        SettingsRow(
+                            icon = Icons.Outlined.SwipeDown,
+                            title = "Swipe Actions",
+                            subtitle = "Swipe left/right on cards",
+                            trailing = {
+                                Switch(
+                                    checked = swipeOn,
+                                    onCheckedChange = {
+                                        onSwipeActionsToggle(it)
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                    }
+                                )
+                            }
+                        )
+
+                        SettingsDivider()
+
                         // Swipe Left
                         var swipeLeftExpanded by remember { mutableStateOf(false) }
                         val swipeLeftChevronRotation by animateFloatAsState(
-                            targetValue = if (swipeLeftExpanded) 180f else 0f,
+                            targetValue = if (swipeLeftExpanded && swipeOn) 180f else 0f,
                             label = "swipeLeftChevron"
                         )
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                                    swipeLeftExpanded = !swipeLeftExpanded
-                                }
+                                .alpha(if (swipeOn) 1f else 0.4f)
+                                .then(
+                                    if (swipeOn) Modifier.clickable {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        swipeLeftExpanded = !swipeLeftExpanded
+                                    } else Modifier
+                                )
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -494,7 +517,7 @@ fun SettingsScreen(
                         }
 
                         AnimatedVisibility(
-                            visible = swipeLeftExpanded,
+                            visible = swipeLeftExpanded && swipeOn,
                             enter = expandVertically(),
                             exit = shrinkVertically()
                         ) {
@@ -534,17 +557,20 @@ fun SettingsScreen(
                         // Swipe Right
                         var swipeRightExpanded by remember { mutableStateOf(false) }
                         val swipeRightChevronRotation by animateFloatAsState(
-                            targetValue = if (swipeRightExpanded) 180f else 0f,
+                            targetValue = if (swipeRightExpanded && swipeOn) 180f else 0f,
                             label = "swipeRightChevron"
                         )
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    HapticHelper.performClick(view, settingsState.hapticsEnabled)
-                                    swipeRightExpanded = !swipeRightExpanded
-                                }
+                                .alpha(if (swipeOn) 1f else 0.4f)
+                                .then(
+                                    if (swipeOn) Modifier.clickable {
+                                        HapticHelper.performClick(view, settingsState.hapticsEnabled)
+                                        swipeRightExpanded = !swipeRightExpanded
+                                    } else Modifier
+                                )
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -576,7 +602,7 @@ fun SettingsScreen(
                         }
 
                         AnimatedVisibility(
-                            visible = swipeRightExpanded,
+                            visible = swipeRightExpanded && swipeOn,
                             enter = expandVertically(),
                             exit = shrinkVertically()
                         ) {

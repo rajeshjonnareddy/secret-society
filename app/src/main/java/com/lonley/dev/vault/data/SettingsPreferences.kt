@@ -46,6 +46,8 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             "editEntry" to prefs.getBoolean(KEY_SCROLL_EDIT_ENTRY, false)
         )
 
+        val swipeActionsEnabled = prefs.getBoolean(KEY_SWIPE_ACTIONS_ENABLED, true)
+
         val swipeLeftAction = try {
             SwipeAction.valueOf(prefs.getString(KEY_SWIPE_LEFT_ACTION, SwipeAction.Edit.name)!!)
         } catch (_: Exception) {
@@ -66,6 +68,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             fontScale = fontScale,
             autoLockTimeout = autoLockTimeout,
             scrollVibrations = scrollVibrations,
+            swipeActionsEnabled = swipeActionsEnabled,
             swipeLeftAction = swipeLeftAction,
             swipeRightAction = swipeRightAction
         )
@@ -84,6 +87,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
             .putBoolean(KEY_SCROLL_SETTINGS, state.scrollVibrations["settings"] ?: false)
             .putBoolean(KEY_SCROLL_PASSWORD_DETAIL, state.scrollVibrations["passwordDetail"] ?: false)
             .putBoolean(KEY_SCROLL_EDIT_ENTRY, state.scrollVibrations["editEntry"] ?: false)
+            .putBoolean(KEY_SWIPE_ACTIONS_ENABLED, state.swipeActionsEnabled)
             .putString(KEY_SWIPE_LEFT_ACTION, state.swipeLeftAction.name)
             .putString(KEY_SWIPE_RIGHT_ACTION, state.swipeRightAction.name)
             .apply()
@@ -101,6 +105,7 @@ class SettingsPreferences(private val prefs: SharedPreferences) {
         private const val KEY_SCROLL_EDIT_ENTRY = "scroll_vibration_edit_entry"
         private const val KEY_FONT_SCALE = "font_scale"
         private const val KEY_AUTO_LOCK_TIMEOUT = "auto_lock_timeout"
+        private const val KEY_SWIPE_ACTIONS_ENABLED = "swipe_actions_enabled"
         private const val KEY_SWIPE_LEFT_ACTION = "swipe_left_action"
         private const val KEY_SWIPE_RIGHT_ACTION = "swipe_right_action"
     }
