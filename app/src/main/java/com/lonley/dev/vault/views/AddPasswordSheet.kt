@@ -26,16 +26,12 @@ import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -64,6 +60,7 @@ import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
+import com.lonley.dev.vault.util.formatTimestamp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,7 +110,6 @@ fun AddPasswordContent(
     var seedPhraseWords by remember { mutableStateOf(List(24) { "" }) }
     var selectedSeedWordCount by remember { mutableStateOf(12) }
     var selectedNetwork by remember { mutableStateOf<Network?>(null) }
-    var networkDropdownExpanded by remember { mutableStateOf(false) }
     var exchange by remember { mutableStateOf("") }
 
     // Subscription fields
@@ -240,95 +236,27 @@ fun AddPasswordContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = "Seed Phrase Word Count",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = selectedSeedWordCount == 12,
-                        onClick = {
-                            HapticHelper.performClick(view, hapticsEnabled)
-                            selectedSeedWordCount = 12
-                            onInteraction()
-                        },
-                        label = { Text("12 Words") }
-                    )
-                    FilterChip(
-                        selected = selectedSeedWordCount == 24,
-                        onClick = {
-                            HapticHelper.performClick(view, hapticsEnabled)
-                            selectedSeedWordCount = 24
-                            onInteraction()
-                        },
-                        label = { Text("24 Words") }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                val seedFilledCount = seedPhraseWords.take(selectedSeedWordCount).count { it.isNotBlank() }
-                Text(
-                    text = "$seedFilledCount / $selectedSeedWordCount words filled",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                PassphraseWordFields(
+                SeedPhraseInput(
                     words = seedPhraseWords,
                     wordCount = selectedSeedWordCount,
                     onWordChange = { index, value ->
                         seedPhraseWords = seedPhraseWords.toMutableList().also { it[index] = value }
-                        onInteraction()
                     },
-                    fieldShape = fieldShape
+                    onWordCountChange = { selectedSeedWordCount = it },
+                    fieldShape = fieldShape,
+                    hapticsEnabled = hapticsEnabled,
+                    onInteraction = onInteraction
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                ExposedDropdownMenuBox(
-                    expanded = networkDropdownExpanded,
-                    onExpandedChange = {
-                        networkDropdownExpanded = it
-                        onInteraction()
-                    }
-                ) {
-                    OutlinedTextField(
-                        value = selectedNetwork?.label ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Network (Optional)") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = networkDropdownExpanded) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Language,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                        shape = fieldShape
-                    )
-                    ExposedDropdownMenu(
-                        expanded = networkDropdownExpanded,
-                        onDismissRequest = { networkDropdownExpanded = false }
-                    ) {
-                        Network.entries.forEach { net ->
-                            DropdownMenuItem(
-                                text = { Text(net.label) },
-                                onClick = {
-                                    HapticHelper.performClick(view, hapticsEnabled)
-                                    selectedNetwork = net
-                                    networkDropdownExpanded = false
-                                    onInteraction()
-                                }
-                            )
-                        }
-                    }
-                }
+                NetworkDropdown(
+                    selectedNetwork = selectedNetwork,
+                    onNetworkSelected = { selectedNetwork = it },
+                    fieldShape = fieldShape,
+                    hapticsEnabled = hapticsEnabled,
+                    onInteraction = onInteraction
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -601,11 +529,7 @@ fun AddPasswordContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Start date button
-                val dateText = if (startDate != null) {
-                    val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-                    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-                    sdf.format(java.util.Date(startDate!!))
-                } else "Select Start Date"
+                val dateText = if (startDate != null) formatTimestamp(startDate!!) else "Select Start Date"
 
                 OutlinedTextField(
                     value = dateText,

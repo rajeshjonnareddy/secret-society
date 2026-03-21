@@ -33,19 +33,19 @@ gradlew.bat clean
 
 ## Architecture
 
-**Single Activity + Compose Navigation pattern:**
+**Single Activity + Compose state-driven navigation:**
 
 ```
 MainActivity (entry point, sets up Scaffold + VaultTheme)
-  └── VaultApp (NavHost container, defines routes)
-        └── Routes: HOME, SIGN_UP, UPLOAD_VAULT
-              └── Screen composables (e.g., HomeScreen)
+  └── VaultApp (state-driven screen container)
+        └── VaultUiState: Initializing → Locked → PromptUnlock → Loading → Unlocked → Error
+              └── AnimatedContent switches between screens: vault, detail, edit, profile, settings, recovery, changePassword
 ```
 
 - `MainActivity.kt` — sole Activity, hosts the Compose UI tree with edge-to-edge rendering
-- `VaultApp.kt` — navigation graph using `NavHost`; routes defined in `Routes` object. Only HOME is implemented; SIGN_UP and UPLOAD_VAULT are stubbed
-- `views/` — screen-level composables; HomeScreen takes callback lambdas for navigation actions
-- `ui/theme/` — Material 3 theming with dynamic color (Android 12+), dark mode support, and a custom animated gradient background
+- `VaultApp.kt` — state-driven navigation via `VaultUiState`. The `Unlocked` branch uses `AnimatedContent` with a `screenKey` string to switch between vault, detail, edit, profile, settings, recovery, and changePassword screens. Bottom sheets are used for add-password and create-vault flows
+- `views/` — screen-level composables; screens take callback lambdas for navigation actions
+- `ui/theme/` — Material 3 theming with dynamic color (Android 12+), dark mode support, custom animated gradient background, and per-accent contrasting heading colors via `LocalVaultColors`
 
 ## Key Patterns
 
@@ -54,6 +54,40 @@ MainActivity (entry point, sets up Scaffold + VaultTheme)
 - **ViewModel for vault state** — `VaultViewModel` manages password entries and vault file I/O; screens collect `StateFlow`
 - **Security-conscious defaults** — backup and data extraction rules are configured to be empty (no cloud backup), aligning with the local-first philosophy
 - **VaultLogger** — `util/VaultLogger.kt` writes to both logcat and `vault.log` file in `context.filesDir`. Initialize with `VaultLogger.init(context)` in `MainActivity.onCreate()`. Use `VaultLogger.d/i/w/e(area, message)` throughout
+
+## Entry Types
+
+Three entry types defined in `model/EntryType.kt`:
+- **Password** — standard credential with username/password
+- **CryptoWallet** (displayed as "Digital Wallet") — stores wallet address, seed phrase, network, and exchange
+- **Passphrase** — legacy type; existing entries are auto-migrated to `CryptoWallet` on load in `VaultRepository.parseEntries()`. Not shown in add/edit UI
+
+Wallet-specific fields in `PasswordEntry`: `walletAddress`, `seedPhrase`, `network` (enum), `exchange` — all nullable.
+
+## Bottom Sheet Pattern
+
+ModalBottomSheets (add password, create vault) use swipe-dismiss prevention:
+```kotlin
+val sheetState = rememberModalBottomSheetState(
+    skipPartiallyExpanded = true,
+    confirmValueChange = { it != SheetValue.Hidden } // blocks swipe-to-dismiss
+)
+```
+Dismissal is done by toggling the show state (`showSheet = false`) which removes the sheet from composition. Never call `sheetState.hide()` with this pattern — it deadlocks since `confirmValueChange` blocks the `Hidden` transition.
+
+## Theme System
+
+- `LocalGlassColors` — provides glass card background/border colors (frosted glass look)
+- `LocalVaultColors` — provides `cardHeading` color for password card entry name headings (contrasting hue per accent color)
+- Heading colors are defined as dark/light pairs in `Color.kt` and resolved by `headingColorForAccent()` in `Theme.kt`
+- For `AccentColor.Auto` with dynamic colors: `colorScheme.tertiary` is used as the heading color
+
+## Shared Composables
+
+- `WalletComponents.kt` — `NetworkDropdown` (network selector) and `SeedPhraseInput` (word count chips + word grid + counter), shared between AddPasswordSheet and PasswordEditScreen
+- `PassphraseWordFields` in `AddPasswordSheet.kt` — low-level word grid with multi-word paste support
+- `GlassCard` in `VaultScreen.kt` — reusable glass-styled container
+- `PasswordTextField` — password field with visibility toggle
 
 ## Screen Layout Rules
 
@@ -69,7 +103,7 @@ All source code lives under `com.lonley.dev.vault` in `app/src/main/java/`.
 
 ## Build Configuration
 
-- Gradle 9.1.0 (Kotlin DSL), AGP 9.0.0, Kotlin 2.0.21
+- Gradle 9.1.0 (Kotlin DSL), AGP 9.0.1, Kotlin 2.2.10
 - Compose BOM 2024.09.00
 - Java 11 target
 - Non-transitive R classes enabled

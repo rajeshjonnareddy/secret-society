@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -69,8 +68,7 @@ fun HomeScreen(
     var currentSloganIndex by remember { mutableIntStateOf(0) }
 
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
     var showCreateSheet by remember { mutableStateOf(false) }
 
@@ -230,7 +228,7 @@ fun HomeScreen(
     // Create Vault Bottom Sheet
     if (showCreateSheet) {
         ModalBottomSheet(
-            onDismissRequest = { /* Dismiss only via Cancel/Confirm buttons */ },
+            onDismissRequest = { showCreateSheet = false },
             sheetState = sheetState
         ) {
             Box(modifier = Modifier.fillMaxHeight(0.85f)) {

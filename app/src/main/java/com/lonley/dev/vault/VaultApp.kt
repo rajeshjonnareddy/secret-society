@@ -43,7 +43,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,11 +62,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.lonley.dev.vault.model.EntryType
-import com.lonley.dev.vault.model.FontScale
-import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PasswordEntry
-import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.ChangePasswordState
 import com.lonley.dev.vault.model.RecoveryState
 import com.lonley.dev.vault.model.VaultUiState
@@ -86,7 +81,6 @@ import com.lonley.dev.vault.views.VaultBottomBar
 import com.lonley.dev.vault.views.RecoveryEntryScreen
 import com.lonley.dev.vault.views.RecoveryPhraseScreen
 import com.lonley.dev.vault.views.VaultScreen
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -239,10 +233,8 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
             val addSheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = true,
-                confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden }
+                skipPartiallyExpanded = true
             )
-            val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
             val isSuspended by viewModel.isSuspended.collectAsState()
             val suspendError by viewModel.suspendError.collectAsState()
@@ -362,6 +354,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                 showProfile = false
             }
             BackHandler(enabled = showAddSheet) {
+                generatedPasswordForAdd = ""
                 showAddSheet = false
             }
 
@@ -716,7 +709,10 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             if (showAddSheet) {
                 ModalBottomSheet(
-                    onDismissRequest = { /* Dismiss only via Cancel/Save buttons */ },
+                    onDismissRequest = {
+                        generatedPasswordForAdd = ""
+                        showAddSheet = false
+                    },
                     sheetState = addSheetState
                 ) {
                     Box(modifier = Modifier.fillMaxHeight(0.85f).pointerInput(Unit) {

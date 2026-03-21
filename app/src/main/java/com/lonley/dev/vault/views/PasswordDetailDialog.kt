@@ -43,16 +43,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -96,12 +92,7 @@ import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.nextRenewalDate
 import com.lonley.dev.vault.util.HapticHelper
-
-private fun formatTimestamp(epochMs: Long): String {
-    val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-    sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-    return sdf.format(java.util.Date(epochMs))
-}
+import com.lonley.dev.vault.util.formatTimestamp
 
 @Composable
 private fun DetailFieldRow(
@@ -728,7 +719,6 @@ fun PasswordEditScreen(
         )
     }
     var selectedNetwork by remember(entry) { mutableStateOf(entry.network) }
-    var networkDropdownExpanded by remember { mutableStateOf(false) }
     var editExchange by remember(entry) { mutableStateOf(entry.exchange ?: "") }
 
     // Subscription fields
@@ -939,88 +929,25 @@ fun PasswordEditScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "Seed Phrase Word Count",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = selectedSeedWordCount == 12,
-                            onClick = {
-                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                selectedSeedWordCount = 12
-                            },
-                            label = { Text("12 Words") }
-                        )
-                        FilterChip(
-                            selected = selectedSeedWordCount == 24,
-                            onClick = {
-                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                selectedSeedWordCount = 24
-                            },
-                            label = { Text("24 Words") }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val seedFilledCount = seedPhraseWords.take(selectedSeedWordCount).count { it.isNotBlank() }
-                    Text(
-                        text = "$seedFilledCount / $selectedSeedWordCount words filled",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    PassphraseWordFields(
+                    SeedPhraseInput(
                         words = seedPhraseWords,
                         wordCount = selectedSeedWordCount,
                         onWordChange = { index, value ->
                             seedPhraseWords = seedPhraseWords.toMutableList().also { it[index] = value }
                         },
-                        fieldShape = fieldShape
+                        onWordCountChange = { selectedSeedWordCount = it },
+                        fieldShape = fieldShape,
+                        hapticsEnabled = settingsState.hapticsEnabled
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    ExposedDropdownMenuBox(
-                        expanded = networkDropdownExpanded,
-                        onExpandedChange = { networkDropdownExpanded = it }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedNetwork?.label ?: "",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Network (Optional)") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = networkDropdownExpanded) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Language,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            shape = fieldShape
-                        )
-                        ExposedDropdownMenu(
-                            expanded = networkDropdownExpanded,
-                            onDismissRequest = { networkDropdownExpanded = false }
-                        ) {
-                            Network.entries.forEach { net ->
-                                DropdownMenuItem(
-                                    text = { Text(net.label) },
-                                    onClick = {
-                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                        selectedNetwork = net
-                                        networkDropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
+                    NetworkDropdown(
+                        selectedNetwork = selectedNetwork,
+                        onNetworkSelected = { selectedNetwork = it },
+                        fieldShape = fieldShape,
+                        hapticsEnabled = settingsState.hapticsEnabled
+                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -1236,11 +1163,7 @@ fun PasswordEditScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Start date
-                    val dateText = if (startDate != null) {
-                        val sdf = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
-                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-                        sdf.format(java.util.Date(startDate!!))
-                    } else "Select Start Date"
+                    val dateText = if (startDate != null) formatTimestamp(startDate!!) else "Select Start Date"
 
                     OutlinedTextField(
                         value = dateText,
@@ -1461,14 +1384,14 @@ private fun PassphraseGridSection(
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Passphrase",
+                    text = "Seed Phrase",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${words.size}-word passphrase",
+                    text = "${words.size}-word seed phrase",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1476,7 +1399,7 @@ private fun PassphraseGridSection(
             IconButton(onClick = onToggleVisibility) {
                 Icon(
                     imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                    contentDescription = if (visible) "Hide passphrase" else "Show passphrase",
+                    contentDescription = if (visible) "Hide seed phrase" else "Show seed phrase",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1484,7 +1407,7 @@ private fun PassphraseGridSection(
             IconButton(onClick = onCopy) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy passphrase",
+                    contentDescription = "Copy seed phrase",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

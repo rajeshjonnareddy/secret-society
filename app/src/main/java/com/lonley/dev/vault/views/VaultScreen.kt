@@ -268,13 +268,6 @@ private fun PasswordEntryItem(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (entry.entryType == EntryType.Passphrase) {
-                                Text(
-                                    text = "${entry.phraseWordCount ?: entry.password.trim().split("\\s+".toRegex()).size}-word passphrase",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.tertiary
-                                )
-                            }
                             if (entry.entryType == EntryType.CryptoWallet) {
                                 Text(
                                     text = entry.network?.label ?: "Digital Wallet",

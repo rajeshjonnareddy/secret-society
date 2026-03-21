@@ -1,4 +1,6 @@
-# Plan: Crypto Wallet Entry Type + Complementary Card Accent Colors
+# Plan: Crypto Wallet Entry Type + Complementary Card Accent Colors [COMPLETED]
+
+> **Status:** All features implemented and refactored. See CLAUDE.md for current architecture.
 
 ## Feature 1: Crypto Wallet Entry Type
 
