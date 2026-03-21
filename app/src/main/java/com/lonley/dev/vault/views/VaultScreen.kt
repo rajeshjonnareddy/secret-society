@@ -49,8 +49,16 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -73,6 +81,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +98,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.drop
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
@@ -253,6 +263,13 @@ private fun PasswordEntryItem(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (entry.entryType == EntryType.Passphrase) {
+                                Text(
+                                    text = "${entry.phraseWordCount ?: entry.password.trim().split("\\s+".toRegex()).size}-word passphrase",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -659,6 +676,11 @@ fun VaultScreen(
 ) {
     val view = LocalView.current
     val listState = rememberLazyListState()
+    val isCollapsed by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 50
+        }
+    }
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(settingsState?.hapticsEnabled, settingsState?.scrollVibrations) {
@@ -765,132 +787,191 @@ fun VaultScreen(
                 radius = 200f
             )
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(filterPills.size) { index ->
-                    val pill = filterPills[index]
-                    val isSelected = pill.isFilter && selectedFilter == pill.label
-
-                    GlassCard(
-                        modifier = Modifier
-                            .width(if (pill.count != null) 120.dp else 100.dp)
-                            .height(90.dp)
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    1.5.dp,
-                                    Brush.linearGradient(listOf(primaryColor, tertiaryColor)),
-                                    RoundedCornerShape(16.dp)
-                                ) else Modifier
-                            )
-                            .then(
-                                if (pill.isFilter) Modifier.clickable {
-                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
-                                    selectedFilter = pill.label
-                                } else Modifier
-                            )
+            AnimatedContent(
+                targetState = isCollapsed,
+                transitionSpec = {
+                    (fadeIn() + expandVertically()) togetherWith (fadeOut() + shrinkVertically())
+                },
+                label = "dashboard-collapse"
+            ) { collapsed ->
+                if (collapsed) {
+                    // ── Compact filter chips ──
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Credit card background layers
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(cardGradient)
-                                .background(shineGradient)
-                        )
+                        items(filterPills.size) { index ->
+                            val pill = filterPills[index]
+                            val isSelected = pill.isFilter && selectedFilter == pill.label
+                            val chipLabel = when {
+                                pill.count != null -> "${pill.label} (${pill.count})"
+                                pill.displayValue != null -> "${pill.label}: ${pill.displayValue}"
+                                else -> pill.label
+                            }
 
-                        // Content
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(14.dp)
-                        ) {
-                            if (pill.count != null) {
-                                Row(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxHeight(),
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Icon(
-                                            imageVector = pill.icon,
-                                            contentDescription = null,
-                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Text(
-                                            text = pill.label,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                            maxLines = 1
-                                        )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (pill.isFilter) {
+                                        HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                        selectedFilter = pill.label
                                     }
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .widthIn(min = 36.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = pill.count.toString(),
-                                            style = MaterialTheme.typography.displayMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            } else if (pill.displayValue != null) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
+                                },
+                                label = {
+                                    Text(
+                                        text = chipLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1
+                                    )
+                                },
+                                leadingIcon = {
                                     Icon(
                                         imageVector = pill.icon,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
-                                    Text(
-                                        text = pill.displayValue,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .basicMarquee(
-                                                iterations = Int.MAX_VALUE,
-                                                initialDelayMillis = 1000,
-                                                repeatDelayMillis = 2000
+                                },
+                                border = if (isSelected) FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = true,
+                                    borderColor = primaryColor,
+                                    borderWidth = 1.5.dp
+                                ) else FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = false
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    // ── Expanded glass cards ──
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(filterPills.size) { index ->
+                            val pill = filterPills[index]
+                            val isSelected = pill.isFilter && selectedFilter == pill.label
+
+                            GlassCard(
+                                modifier = Modifier
+                                    .width(if (pill.count != null) 120.dp else 100.dp)
+                                    .height(90.dp)
+                                    .then(
+                                        if (isSelected) Modifier.border(
+                                            1.5.dp,
+                                            Brush.linearGradient(listOf(primaryColor, tertiaryColor)),
+                                            RoundedCornerShape(16.dp)
+                                        ) else Modifier
+                                    )
+                                    .then(
+                                        if (pill.isFilter) Modifier.clickable {
+                                            HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                            selectedFilter = pill.label
+                                        } else Modifier
+                                    )
+                            ) {
+                                // Credit card background layers
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(cardGradient)
+                                        .background(shineGradient)
+                                )
+
+                                // Content
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(14.dp)
+                                ) {
+                                    if (pill.count != null) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.fillMaxHeight(),
+                                                verticalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Icon(
+                                                    imageVector = pill.icon,
+                                                    contentDescription = null,
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(
+                                                    text = pill.label,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxHeight()
+                                                    .widthIn(min = 36.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = pill.count.toString(),
+                                                    style = MaterialTheme.typography.displayMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                    } else if (pill.displayValue != null) {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Icon(
+                                                imageVector = pill.icon,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
                                             )
-                                    )
-                                    Text(
-                                        text = pill.label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
-                                    )
-                                }
-                            } else {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Icon(
-                                        imageVector = pill.icon,
-                                        contentDescription = null,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = pill.label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        maxLines = 1
-                                    )
+                                            Text(
+                                                text = pill.displayValue,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .basicMarquee(
+                                                        iterations = Int.MAX_VALUE,
+                                                        initialDelayMillis = 1000,
+                                                        repeatDelayMillis = 2000
+                                                    )
+                                            )
+                                            Text(
+                                                text = pill.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    } else {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Icon(
+                                                imageVector = pill.icon,
+                                                contentDescription = null,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = pill.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

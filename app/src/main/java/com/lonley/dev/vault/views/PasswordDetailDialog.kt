@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -50,6 +51,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,6 +65,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -79,6 +83,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.SettingsState
@@ -201,7 +206,11 @@ fun PasswordDetailScreen(
             }
 
             Text(
-                text = if (entry.isSubscription) "Your subscription." else "Your saved credential.",
+                text = when {
+                    entry.isSubscription -> "Your subscription."
+                    entry.entryType == EntryType.Passphrase -> "Your saved passphrase."
+                    else -> "Your saved credential."
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -305,37 +314,52 @@ fun PasswordDetailScreen(
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
 
-                        // Password row
-                        DetailFieldRow(
-                            icon = Icons.Outlined.Lock,
-                            iconTint = MaterialTheme.colorScheme.primary,
-                            label = "Password",
-                            value = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
-                            trailingContent = {
-                                IconButton(onClick = {
+                        // Password / Passphrase row
+                        if (entry.entryType == EntryType.Passphrase) {
+                            PassphraseGridSection(
+                                passphrase = entry.password,
+                                visible = passwordVisible,
+                                onToggleVisibility = {
                                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
                                     passwordVisible = !passwordVisible
-                                }) {
-                                    Icon(
-                                        imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                IconButton(onClick = {
+                                },
+                                onCopy = {
                                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
                                     onCopyToClipboard(entry.password)
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy password",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
                                 }
-                            }
-                        )
+                            )
+                        } else {
+                            DetailFieldRow(
+                                icon = Icons.Outlined.Lock,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                label = "Password",
+                                value = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
+                                trailingContent = {
+                                    IconButton(onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        passwordVisible = !passwordVisible
+                                    }) {
+                                        Icon(
+                                            imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onCopyToClipboard(entry.password)
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copy password",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            )
+                        }
 
                         // Website row (conditional)
                         if (!entry.website.isNullOrBlank()) {
@@ -604,7 +628,8 @@ fun PasswordEditScreen(
         website: String?, comments: String?,
         isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
         price: String?, subscriptionEmail: String?, startDate: Long?,
-        reminderEnabled: Boolean
+        reminderEnabled: Boolean,
+        entryType: EntryType, phraseWordCount: Int?
     ) -> Unit,
     onDelete: (id: String) -> Unit = {},
     onToggleFavorite: () -> Unit = {}
@@ -620,6 +645,16 @@ fun PasswordEditScreen(
     var password by remember(entry) { mutableStateOf(entry.password) }
     var website by remember(entry) { mutableStateOf(entry.website ?: "") }
     var comments by remember(entry) { mutableStateOf(entry.comments ?: "") }
+
+    // Entry type fields
+    var selectedEntryType by remember(entry) { mutableStateOf(entry.entryType) }
+    var selectedWordCount by remember(entry) { mutableStateOf(entry.phraseWordCount ?: 12) }
+    var phraseWords by remember(entry) {
+        val existingWords = if (entry.entryType == EntryType.Passphrase) {
+            entry.password.trim().split("\\s+".toRegex())
+        } else emptyList()
+        mutableStateOf(List(24) { i -> existingWords.getOrElse(i) { "" } })
+    }
 
     // Subscription fields
     var isFavorite by remember(entry) { mutableStateOf(entry.isFavorite) }
@@ -639,7 +674,11 @@ fun PasswordEditScreen(
     var nameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && password.isNotBlank()
+    val isFormValid = name.isNotBlank() && if (selectedEntryType == EntryType.Password) {
+        password.isNotBlank()
+    } else {
+        phraseWords.take(selectedWordCount).all { it.isNotBlank() }
+    }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
@@ -770,43 +809,119 @@ fun PasswordEditScreen(
                 shape = fieldShape
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                singleLine = true,
-                isError = passwordDirty && password.isBlank(),
-                supportingText = if (passwordDirty && password.isBlank()) {
-                    { Text("Password is required") }
-                } else null,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                },
-                trailingIcon = {
-                    IconButton(onClick = {
+            // Entry type selector
+            Text(
+                text = "Type",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = selectedEntryType == EntryType.Password,
+                    onClick = {
                         HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                        passwordVisible = !passwordVisible
-                    }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                            tint = MaterialTheme.colorScheme.primary
+                        selectedEntryType = EntryType.Password
+                    },
+                    label = { Text("Password") }
+                )
+                FilterChip(
+                    selected = selectedEntryType == EntryType.Passphrase,
+                    onClick = {
+                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                        selectedEntryType = EntryType.Passphrase
+                    },
+                    label = { Text("Passphrase") }
+                )
+            }
+
+            AnimatedVisibility(visible = selectedEntryType == EntryType.Passphrase) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Word Count",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = selectedWordCount == 12,
+                            onClick = {
+                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                selectedWordCount = 12
+                            },
+                            label = { Text("12 Words") }
+                        )
+                        FilterChip(
+                            selected = selectedWordCount == 24,
+                            onClick = {
+                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                selectedWordCount = 24
+                            },
+                            label = { Text("24 Words") }
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { if (!it.isFocused) passwordDirty = true },
-                shape = fieldShape
-            )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (selectedEntryType == EntryType.Password) {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    isError = passwordDirty && password.isBlank(),
+                    supportingText = if (passwordDirty && password.isBlank()) {
+                        { Text("Password is required") }
+                    } else null,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                            passwordVisible = !passwordVisible
+                        }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (!it.isFocused) passwordDirty = true },
+                    shape = fieldShape
+                )
+            } else {
+                val filledCount = phraseWords.take(selectedWordCount).count { it.isNotBlank() }
+                Text(
+                    text = "$filledCount / $selectedWordCount words filled",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PassphraseWordFields(
+                    words = phraseWords,
+                    wordCount = selectedWordCount,
+                    onWordChange = { index, value ->
+                        phraseWords = phraseWords.toMutableList().also { it[index] = value }
+                    },
+                    fieldShape = fieldShape
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -1046,12 +1161,17 @@ fun PasswordEditScreen(
             Button(
                 onClick = {
                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                    val finalPassword = if (selectedEntryType == EntryType.Passphrase) {
+                        phraseWords.take(selectedWordCount).joinToString(" ") { it.trim() }
+                    } else password
                     onSave(
-                        entry.id, name, username, email, password,
+                        entry.id, name, username, email, finalPassword,
                         website.ifBlank { null }, comments.ifBlank { null },
                         isFavorite, isSubscription, selectedPlanType,
                         price.ifBlank { null }, subscriptionEmail.ifBlank { null },
-                        startDate, reminderEnabled
+                        startDate, reminderEnabled,
+                        selectedEntryType,
+                        if (selectedEntryType == EntryType.Passphrase) selectedWordCount else null
                     )
                 },
                 enabled = isFormValid,
@@ -1132,5 +1252,125 @@ fun PasswordEditScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun PassphraseGridSection(
+    passphrase: String,
+    visible: Boolean,
+    onToggleVisibility: () -> Unit,
+    onCopy: () -> Unit
+) {
+    val words = passphrase.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
+    val columns = 3
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Passphrase",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${words.size}-word passphrase",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onToggleVisibility) {
+                Icon(
+                    imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    contentDescription = if (visible) "Hide passphrase" else "Show passphrase",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = onCopy) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy passphrase",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val blurRadius by animateDpAsState(
+            targetValue = if (visible) 0.dp else 12.dp,
+            label = "passphrase-blur"
+        )
+
+        val rowCount = (words.size + columns - 1) / columns
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.blur(blurRadius)
+        ) {
+            for (row in 0 until rowCount) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    for (col in 0 until columns) {
+                        val index = row * columns + col
+                        if (index < words.size) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "${index + 1}.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = words[index],
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

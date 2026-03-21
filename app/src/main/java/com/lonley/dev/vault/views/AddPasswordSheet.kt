@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
@@ -74,7 +75,9 @@ fun AddPasswordContent(
         price: String?,
         subscriptionEmail: String?,
         startDate: Long?,
-        reminderEnabled: Boolean
+        reminderEnabled: Boolean,
+        entryType: EntryType,
+        phraseWordCount: Int?
     ) -> Unit,
     onCancel: () -> Unit,
     hapticsEnabled: Boolean = false,
@@ -93,6 +96,11 @@ fun AddPasswordContent(
     var nameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
+    // Entry type fields
+    var selectedEntryType by remember { mutableStateOf(EntryType.Password) }
+    var selectedWordCount by remember { mutableStateOf(12) }
+    var phraseWords by remember { mutableStateOf(List(24) { "" }) }
+
     // Subscription fields
     var isSubscription by remember { mutableStateOf(false) }
     var selectedPlanType by remember { mutableStateOf<PlanType?>(null) }
@@ -103,7 +111,11 @@ fun AddPasswordContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showGeneratorDialog by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && password.isNotBlank()
+    val isFormValid = name.isNotBlank() && if (selectedEntryType == EntryType.Password) {
+        password.isNotBlank()
+    } else {
+        phraseWords.take(selectedWordCount).all { it.isNotBlank() }
+    }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
     Column(
@@ -127,7 +139,70 @@ fun AddPasswordContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Entry type selector
+        Text(
+            text = "Type",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = selectedEntryType == EntryType.Password,
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    selectedEntryType = EntryType.Password
+                    onInteraction()
+                },
+                label = { Text("Password") }
+            )
+            FilterChip(
+                selected = selectedEntryType == EntryType.Passphrase,
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    selectedEntryType = EntryType.Passphrase
+                    password = ""
+                    onInteraction()
+                },
+                label = { Text("Passphrase") }
+            )
+        }
+
+        AnimatedVisibility(visible = selectedEntryType == EntryType.Passphrase) {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Word Count",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = selectedWordCount == 12,
+                        onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
+                            selectedWordCount = 12
+                            onInteraction()
+                        },
+                        label = { Text("12 Words") }
+                    )
+                    FilterChip(
+                        selected = selectedWordCount == 24,
+                        onClick = {
+                            HapticHelper.performClick(view, hapticsEnabled)
+                            selectedWordCount = 24
+                            onInteraction()
+                        },
+                        label = { Text("24 Words") }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = name,
@@ -190,38 +265,57 @@ fun AddPasswordContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        PasswordTextField(
-            value = password,
-            onValueChange = { password = it; onInteraction() },
-            label = "Password",
-            isError = passwordDirty && password.isBlank(),
-            supportingText = if (passwordDirty && password.isBlank()) {
-                { Text("Password is required") }
-            } else null,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            },
-            extraTrailingIcon = {
-                IconButton(onClick = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    showGeneratorDialog = true
-                }) {
+        if (selectedEntryType == EntryType.Password) {
+            PasswordTextField(
+                value = password,
+                onValueChange = { password = it; onInteraction() },
+                label = "Password",
+                isError = passwordDirty && password.isBlank(),
+                supportingText = if (passwordDirty && password.isBlank()) {
+                    { Text("Password is required") }
+                } else null,
+                leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Password,
-                        contentDescription = "Generate Password",
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { if (!it.isFocused) passwordDirty = true },
-            shape = fieldShape
-        )
+                },
+                extraTrailingIcon = {
+                    IconButton(onClick = {
+                        HapticHelper.performClick(view, hapticsEnabled)
+                        showGeneratorDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Password,
+                            contentDescription = "Generate Password",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (!it.isFocused) passwordDirty = true },
+                shape = fieldShape
+            )
+        } else {
+            val filledCount = phraseWords.take(selectedWordCount).count { it.isNotBlank() }
+            Text(
+                text = "$filledCount / $selectedWordCount words filled",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PassphraseWordFields(
+                words = phraseWords,
+                wordCount = selectedWordCount,
+                onWordChange = { index, value ->
+                    phraseWords = phraseWords.toMutableList().also { it[index] = value }
+                    onInteraction()
+                },
+                fieldShape = fieldShape
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -461,12 +555,17 @@ fun AddPasswordContent(
             Button(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
+                    val finalPassword = if (selectedEntryType == EntryType.Passphrase) {
+                        phraseWords.take(selectedWordCount).joinToString(" ") { it.trim() }
+                    } else password
                     onConfirm(
-                        name, username, email, password, website, comments,
+                        name, username, email, finalPassword, website, comments,
                         isSubscription, selectedPlanType,
                         price.ifBlank { null },
                         subscriptionEmail.ifBlank { null },
-                        startDate, reminderEnabled
+                        startDate, reminderEnabled,
+                        selectedEntryType,
+                        if (selectedEntryType == EntryType.Passphrase) selectedWordCount else null
                     )
                 },
                 enabled = isFormValid,
@@ -533,12 +632,57 @@ fun AddPasswordContent(
     }
 }
 
+@Composable
+fun PassphraseWordFields(
+    words: List<String>,
+    wordCount: Int,
+    onWordChange: (index: Int, value: String) -> Unit,
+    fieldShape: androidx.compose.ui.graphics.Shape = MaterialTheme.shapes.medium
+) {
+    val columns = 3
+    val rows = wordCount / columns
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (row in 0 until rows) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                for (col in 0 until columns) {
+                    val index = row * columns + col
+                    OutlinedTextField(
+                        value = words[index],
+                        onValueChange = { value ->
+                            val pastedWords = value.trim().split("\\s+".toRegex())
+                            if (pastedWords.size > 1) {
+                                // Pasted a multi-word phrase — distribute across fields
+                                pastedWords.forEachIndexed { offset, word ->
+                                    val targetIndex = index + offset
+                                    if (targetIndex < wordCount) {
+                                        onWordChange(targetIndex, word)
+                                    }
+                                }
+                            } else {
+                                onWordChange(index, value.filter { !it.isWhitespace() })
+                            }
+                        },
+                        label = { Text("${index + 1}.") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        shape = fieldShape,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun AddPasswordContentPreview() {
     VaultTheme {
         AddPasswordContent(
-            onConfirm = { _, _, _, _, _, _, _, _, _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
             onCancel = {}
         )
     }

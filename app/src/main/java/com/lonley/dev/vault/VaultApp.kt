@@ -62,6 +62,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
@@ -424,7 +425,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                             },
                             onSave = { id, name, username, email, password, website, comments,
                                        isFavorite, isSubscription, planType, price,
-                                       subscriptionEmail, startDate, reminderEnabled ->
+                                       subscriptionEmail, startDate, reminderEnabled,
+                                       entryType, phraseWordCount ->
                                 viewModel.resetAutoLockTimer()
                                 if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -442,7 +444,9 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     price = price,
                                     subscriptionEmail = subscriptionEmail,
                                     startDate = startDate,
-                                    reminderEnabled = reminderEnabled
+                                    reminderEnabled = reminderEnabled,
+                                    entryType = entryType,
+                                    phraseWordCount = phraseWordCount
                                 )
                                 val updated = entry.copy(
                                     name = name,
@@ -457,7 +461,9 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     price = price,
                                     subscriptionEmail = subscriptionEmail,
                                     startDate = startDate,
-                                    reminderEnabled = reminderEnabled
+                                    reminderEnabled = reminderEnabled,
+                                    entryType = entryType,
+                                    phraseWordCount = phraseWordCount
                                 )
                                 selectedEntry = updated
                                 editingEntry = null
@@ -712,7 +718,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                     AddPasswordContent(
                         onConfirm = { name, username, email, password, website, comments,
                                       isSubscription, planType, price, subscriptionEmail,
-                                      startDate, reminderEnabled ->
+                                      startDate, reminderEnabled, entryType, phraseWordCount ->
                             viewModel.resetAutoLockTimer()
                             if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -729,7 +735,9 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 price = price,
                                 subscriptionEmail = subscriptionEmail,
                                 startDate = startDate,
-                                reminderEnabled = reminderEnabled
+                                reminderEnabled = reminderEnabled,
+                                entryType = entryType,
+                                phraseWordCount = phraseWordCount
                             )
                             generatedPasswordForAdd = ""
                             scope.launch { addSheetState.hide() }.invokeOnCompletion {

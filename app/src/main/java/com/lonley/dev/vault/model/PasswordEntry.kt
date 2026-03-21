@@ -15,5 +15,7 @@ data class PasswordEntry(
     val price: String? = null,
     val subscriptionEmail: String? = null,
     val startDate: Long? = null,
-    val reminderEnabled: Boolean = false
+    val reminderEnabled: Boolean = false,
+    val entryType: EntryType = EntryType.Password,
+    val phraseWordCount: Int? = null
 )

@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Kotlin serialization & data classes used by the vault
+-keepattributes *Annotation*
+-keep class com.lonley.dev.vault.model.** { *; }
+
+# Argon2kt native library
+-keep class com.lambdapioneer.argon2kt.** { *; }

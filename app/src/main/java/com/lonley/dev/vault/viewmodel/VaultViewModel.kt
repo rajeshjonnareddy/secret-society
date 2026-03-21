@@ -10,6 +10,7 @@ import com.lonley.dev.vault.model.AccentColor
 import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.crypto.RecoveryCrypto
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.RecoveryState
@@ -481,7 +482,9 @@ class VaultViewModel(
         price: String? = null,
         subscriptionEmail: String? = null,
         startDate: Long? = null,
-        reminderEnabled: Boolean = false
+        reminderEnabled: Boolean = false,
+        entryType: EntryType = EntryType.Password,
+        phraseWordCount: Int? = null
     ) {
         val entry = PasswordEntry(
             id = UUID.randomUUID().toString(),
@@ -497,7 +500,9 @@ class VaultViewModel(
             price = price,
             subscriptionEmail = subscriptionEmail,
             startDate = startDate,
-            reminderEnabled = reminderEnabled
+            reminderEnabled = reminderEnabled,
+            entryType = entryType,
+            phraseWordCount = phraseWordCount
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
@@ -526,7 +531,9 @@ class VaultViewModel(
         price: String? = null,
         subscriptionEmail: String? = null,
         startDate: Long? = null,
-        reminderEnabled: Boolean = false
+        reminderEnabled: Boolean = false,
+        entryType: EntryType = EntryType.Password,
+        phraseWordCount: Int? = null
     ) {
         val index = entries.indexOfFirst { it.id == id }
         if (index == -1) return
@@ -544,7 +551,9 @@ class VaultViewModel(
             price = price,
             subscriptionEmail = subscriptionEmail,
             startDate = startDate,
-            reminderEnabled = reminderEnabled
+            reminderEnabled = reminderEnabled,
+            entryType = entryType,
+            phraseWordCount = phraseWordCount
         )
         lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value

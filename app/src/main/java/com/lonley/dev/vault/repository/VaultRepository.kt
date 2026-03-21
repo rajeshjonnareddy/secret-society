@@ -1,6 +1,7 @@
 package com.lonley.dev.vault.repository
 
 import com.lonley.dev.vault.crypto.VaultCrypto
+import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.util.VaultLogger
@@ -88,6 +89,8 @@ class VaultRepository(private val filesDir: File) {
                 put("subscriptionEmail", entry.subscriptionEmail ?: JSONObject.NULL)
                 put("startDate", entry.startDate ?: JSONObject.NULL)
                 put("reminderEnabled", entry.reminderEnabled)
+                put("entryType", entry.entryType.name)
+                put("phraseWordCount", entry.phraseWordCount ?: JSONObject.NULL)
             })
         }
         metadata.put("passwords", passwordsArray)
@@ -163,7 +166,11 @@ class VaultRepository(private val filesDir: File) {
                 price = if (obj.isNull("price")) null else obj.optString("price"),
                 subscriptionEmail = if (obj.isNull("subscriptionEmail")) null else obj.optString("subscriptionEmail"),
                 startDate = if (obj.isNull("startDate")) null else obj.optLong("startDate", 0L).takeIf { it > 0 },
-                reminderEnabled = obj.optBoolean("reminderEnabled", false)
+                reminderEnabled = obj.optBoolean("reminderEnabled", false),
+                entryType = obj.optString("entryType", "").let { name ->
+                    EntryType.entries.firstOrNull { it.name == name } ?: EntryType.Password
+                },
+                phraseWordCount = if (obj.isNull("phraseWordCount")) null else obj.optInt("phraseWordCount", 0).takeIf { it > 0 }
             )
         }
     }
