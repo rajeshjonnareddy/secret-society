@@ -477,15 +477,18 @@ fun VaultTheme(
         }
     }
 
+    // Swap: old app bg tones → glass cards, old glass tones → app bg
     val glassColors = if (darkTheme) {
         GlassColors(
-            background = Color.White.copy(alpha = 0.06f),
-            border = Color.White.copy(alpha = 0.08f)
+            background = colorScheme.primary.copy(alpha = 0.06f)
+                .compositeOver(Color(0xFF101018)),
+            border = Color.White.copy(alpha = 0.06f)
         )
     } else {
         GlassColors(
-            background = Color.White.copy(alpha = 0.65f),
-            border = colorScheme.outlineVariant.copy(alpha = 0.3f)
+            background = colorScheme.primary.copy(alpha = 0.04f)
+                .compositeOver(Color(0xFFF4F4F8)),
+            border = colorScheme.outlineVariant.copy(alpha = 0.25f)
         )
     }
 
@@ -501,23 +504,24 @@ fun VaultTheme(
                     .fillMaxSize()
                     .background(
                         if (darkTheme) {
-                            // Dark: deep vertical gradient with a subtle tonal tint from the accent
+                            // Dark: frosted-surface base
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xFF0D0D12),
-                                    colorScheme.primary.copy(alpha = 0.06f)
-                                        .compositeOver(Color(0xFF101018)),
+                                    Color.White.copy(alpha = 0.04f)
+                                        .compositeOver(Color(0xFF0E0E14)),
+                                    Color.White.copy(alpha = 0.06f)
+                                        .compositeOver(Color(0xFF0C0C11)),
                                     Color(0xFF0A0A0F)
                                 )
                             )
                         } else {
-                            // Light: clean warm white with subtle tonal wash at the top
+                            // Light: bright frosted white
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    colorScheme.primary.copy(alpha = 0.05f)
-                                        .compositeOver(Color(0xFFFCFCFF)),
-                                    Color(0xFFF8F8FC),
-                                    colorScheme.background
+                                    Color.White,
+                                    Color.White.copy(alpha = 0.85f)
+                                        .compositeOver(Color(0xFFF8F8FC)),
+                                    Color(0xFFFCFCFF)
                                 )
                             )
                         }
