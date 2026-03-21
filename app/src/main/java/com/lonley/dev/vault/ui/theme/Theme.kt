@@ -2,13 +2,6 @@ package com.lonley.dev.vault.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -22,12 +15,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -487,13 +479,13 @@ fun VaultTheme(
 
     val glassColors = if (darkTheme) {
         GlassColors(
-            background = colorScheme.surface.copy(alpha = 0.3f),
-            border = Color.White.copy(alpha = 0.1f)
+            background = Color.White.copy(alpha = 0.06f),
+            border = Color.White.copy(alpha = 0.08f)
         )
     } else {
         GlassColors(
-            background = colorScheme.surfaceVariant.copy(alpha = 0.55f),
-            border = colorScheme.outlineVariant.copy(alpha = 0.5f)
+            background = Color.White.copy(alpha = 0.65f),
+            border = colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
     }
 
@@ -507,66 +499,32 @@ fun VaultTheme(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(colorScheme.background)
+                    .background(
+                        if (darkTheme) {
+                            // Dark: deep vertical gradient with a subtle tonal tint from the accent
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF0D0D12),
+                                    colorScheme.primary.copy(alpha = 0.06f)
+                                        .compositeOver(Color(0xFF101018)),
+                                    Color(0xFF0A0A0F)
+                                )
+                            )
+                        } else {
+                            // Light: clean warm white with subtle tonal wash at the top
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    colorScheme.primary.copy(alpha = 0.05f)
+                                        .compositeOver(Color(0xFFFCFCFF)),
+                                    Color(0xFFF8F8FC),
+                                    colorScheme.background
+                                )
+                            )
+                        }
+                    )
             ) {
-                ThemeAwareAnimatedBackground(
-                    primaryColor = colorScheme.primary,
-                    secondaryColor = colorScheme.tertiary
-                )
-
                 content()
             }
         }
-    }
-}
-
-/**
- * A reusable animated background component that adapts to the provided colors.
- */
-@Composable
-fun ThemeAwareAnimatedBackground(
-    primaryColor: Color,
-    secondaryColor: Color
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "background")
-
-    val offset1 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 100f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "blob1"
-    )
-
-    val offset2 by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = -80f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "blob2"
-    )
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
-                center = Offset(x = 0f + offset1, y = 0f + offset1),
-                radius = 900f
-            ),
-            center = Offset(0f, 0f),
-            radius = 900f
-        )
-
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(secondaryColor.copy(alpha = 0.15f), Color.Transparent),
-                center = Offset(x = size.width + offset2, y = size.height + offset2),
-                radius = 1000f
-            ),
-            center = Offset(size.width, size.height),
-            radius = 1000f
-        )
     }
 }

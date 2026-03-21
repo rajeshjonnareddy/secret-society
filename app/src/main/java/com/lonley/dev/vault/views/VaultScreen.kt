@@ -689,9 +689,11 @@ fun VaultScreen(
     val showSearchBar = !isCollapsed || searchExpanded
     val scope = rememberCoroutineScope()
 
-    // Reset search override when user scrolls back to top naturally
-    LaunchedEffect(isCollapsed) {
-        if (!isCollapsed) searchExpanded = false
+    // Reset search override when user scrolls back to top, or scrolls further while expanded
+    LaunchedEffect(Unit) {
+        snapshotFlow { listState.firstVisibleItemScrollOffset }
+            .drop(1)
+            .collect { searchExpanded = false }
     }
 
     LaunchedEffect(settingsState?.hapticsEnabled, settingsState?.scrollVibrations) {
