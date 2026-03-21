@@ -50,6 +50,7 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -82,6 +83,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +100,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.formatPrice
 import com.lonley.dev.vault.model.PasswordEntry
@@ -682,6 +685,14 @@ fun VaultScreen(
         }
     }
     var searchQuery by remember { mutableStateOf("") }
+    var searchExpanded by remember { mutableStateOf(false) }
+    val showSearchBar = !isCollapsed || searchExpanded
+    val scope = rememberCoroutineScope()
+
+    // Reset search override when user scrolls back to top naturally
+    LaunchedEffect(isCollapsed) {
+        if (!isCollapsed) searchExpanded = false
+    }
 
     LaunchedEffect(settingsState?.hapticsEnabled, settingsState?.scrollVibrations) {
         if (settingsState != null && settingsState.hapticsEnabled && settingsState.scrollVibrations["vault"] == true) {
@@ -753,15 +764,34 @@ fun VaultScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            SearchGlassBar(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth()
+            val topSpacing by animateDpAsState(
+                targetValue = if (isCollapsed && !searchExpanded) 8.dp else 24.dp,
+                label = "top-spacing"
+            )
+            val postSearchSpacing by animateDpAsState(
+                targetValue = if (isCollapsed && !searchExpanded) 4.dp else 12.dp,
+                label = "post-search-spacing"
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(topSpacing))
+
+            AnimatedContent(
+                targetState = showSearchBar,
+                transitionSpec = {
+                    (fadeIn() + expandVertically()) togetherWith (fadeOut() + shrinkVertically())
+                },
+                label = "search-collapse"
+            ) { visible ->
+                if (visible) {
+                    SearchGlassBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(postSearchSpacing))
 
             // ── Filter pills (credit card style, replaces both chips + stats row) ──
             val primaryColor = MaterialTheme.colorScheme.primary
@@ -795,10 +825,35 @@ fun VaultScreen(
                 label = "dashboard-collapse"
             ) { collapsed ->
                 if (collapsed) {
-                    // ── Compact filter chips ──
+                    // ── Compact filter chips with search pill first ──
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (!searchExpanded) item {
+                            FilterChip(
+                                selected = searchQuery.isNotBlank(),
+                                onClick = {
+                                    HapticHelper.performClick(view, settingsState?.hapticsEnabled == true)
+                                    searchExpanded = true
+                                },
+                                label = {
+                                    Text(
+                                        text = searchQuery.ifBlank { "Search..." },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.widthIn(max = 120.dp)
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                        }
                         items(filterPills.size) { index ->
                             val pill = filterPills[index]
                             val isSelected = pill.isFilter && selectedFilter == pill.label
@@ -979,7 +1034,11 @@ fun VaultScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            val postPillsSpacing by animateDpAsState(
+                targetValue = if (isCollapsed && !searchExpanded) 4.dp else 10.dp,
+                label = "post-pills-spacing"
+            )
+            Spacer(modifier = Modifier.height(postPillsSpacing))
 
             // ── Content area ──
             if (isLoading) {
