@@ -43,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +56,6 @@ import androidx.activity.compose.BackHandler
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,13 +68,11 @@ fun HomeScreen(
     val sloganParts = listOf("Data", "Device", "Rules")
     var currentSloganIndex by remember { mutableIntStateOf(0) }
 
-    var sheetDismissAllowed by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden || sheetDismissAllowed }
+        confirmValueChange = { it != SheetValue.Hidden }
     )
     var showCreateSheet by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -228,12 +224,7 @@ fun HomeScreen(
 
     // Back button closes the sheet
     BackHandler(enabled = showCreateSheet) {
-        sheetDismissAllowed = true
-        scope.launch {
-            sheetState.hide()
-            showCreateSheet = false
-            sheetDismissAllowed = false
-        }
+        showCreateSheet = false
     }
 
     // Create Vault Bottom Sheet
@@ -246,21 +237,11 @@ fun HomeScreen(
             CreateVaultContent(
                 hapticsEnabled = hapticsEnabled,
                 onConfirm = { vaultName, username, email, masterPassword, encryptionType ->
-                    sheetDismissAllowed = true
-                    scope.launch {
-                        sheetState.hide()
-                        showCreateSheet = false
-                        sheetDismissAllowed = false
-                        createNewVault(vaultName, username, email, masterPassword, encryptionType)
-                    }
+                    showCreateSheet = false
+                    createNewVault(vaultName, username, email, masterPassword, encryptionType)
                 },
                 onCancel = {
-                    sheetDismissAllowed = true
-                    scope.launch {
-                        sheetState.hide()
-                        showCreateSheet = false
-                        sheetDismissAllowed = false
-                    }
+                    showCreateSheet = false
                 }
             )
             }

@@ -238,10 +238,9 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showChangePassword by remember { mutableStateOf(false) }
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
-            var addSheetDismissAllowed by remember { mutableStateOf(false) }
             val addSheetState = rememberModalBottomSheetState(
                 skipPartiallyExpanded = true,
-                confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden || addSheetDismissAllowed }
+                confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden }
             )
             val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
@@ -363,12 +362,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                 showProfile = false
             }
             BackHandler(enabled = showAddSheet) {
-                addSheetDismissAllowed = true
-                scope.launch {
-                    addSheetState.hide()
-                    showAddSheet = false
-                    addSheetDismissAllowed = false
-                }
+                showAddSheet = false
             }
 
             // Snapshot entries so exit animations don't crash on null
@@ -763,21 +757,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 exchange = exchange
                             )
                             generatedPasswordForAdd = ""
-                            addSheetDismissAllowed = true
-                            scope.launch {
-                                addSheetState.hide()
-                                showAddSheet = false
-                                addSheetDismissAllowed = false
-                            }
+                            showAddSheet = false
                         },
                         onCancel = {
                             generatedPasswordForAdd = ""
-                            addSheetDismissAllowed = true
-                            scope.launch {
-                                addSheetState.hide()
-                                showAddSheet = false
-                                addSheetDismissAllowed = false
-                            }
+                            showAddSheet = false
                         },
                         hapticsEnabled = settingsState.hapticsEnabled,
                         initialPassword = generatedPasswordForAdd,
