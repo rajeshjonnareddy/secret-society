@@ -155,6 +155,7 @@ fun PasswordDetailScreen(
 ) {
     val hapticView = LocalView.current
     var passwordVisible by remember { mutableStateOf(false) }
+    var walletAddressVisible by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(
@@ -315,12 +316,28 @@ fun PasswordDetailScreen(
                         when (entry.entryType) {
                             EntryType.CryptoWallet -> {
                                 if (!entry.walletAddress.isNullOrBlank()) {
+                                    val maskedAddress = if (entry.walletAddress.length > 10) {
+                                        entry.walletAddress.take(6) + "••••" + entry.walletAddress.takeLast(4)
+                                    } else {
+                                        "••••••"
+                                    }
                                     DetailFieldRow(
                                         icon = Icons.Outlined.AccountBalanceWallet,
                                         iconTint = MaterialTheme.colorScheme.primary,
                                         label = "Wallet Address",
-                                        value = entry.walletAddress,
+                                        value = if (walletAddressVisible) entry.walletAddress else maskedAddress,
                                         trailingContent = {
+                                            IconButton(onClick = {
+                                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                                walletAddressVisible = !walletAddressVisible
+                                            }) {
+                                                Icon(
+                                                    imageVector = if (walletAddressVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                                    contentDescription = if (walletAddressVisible) "Hide address" else "Show address",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                             IconButton(onClick = {
                                                 HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
                                                 onCopyToClipboard(entry.walletAddress)
