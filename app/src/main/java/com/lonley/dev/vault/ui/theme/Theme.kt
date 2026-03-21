@@ -443,6 +443,31 @@ val LocalGlassColors = staticCompositionLocalOf {
     )
 }
 
+data class VaultColors(
+    val cardHeading: Color
+)
+
+val LocalVaultColors = staticCompositionLocalOf {
+    VaultColors(cardHeading = Color.Unspecified)
+}
+
+internal fun headingColorForAccent(accent: AccentColor, dark: Boolean): Color {
+    return when (accent) {
+        AccentColor.Blue -> if (dark) HeadingBlueDark else HeadingBlueLight
+        AccentColor.Teal -> if (dark) HeadingTealDark else HeadingTealLight
+        AccentColor.Green -> if (dark) HeadingGreenDark else HeadingGreenLight
+        AccentColor.Yellow -> if (dark) HeadingYellowDark else HeadingYellowLight
+        AccentColor.Orange -> if (dark) HeadingOrangeDark else HeadingOrangeLight
+        AccentColor.Purple -> if (dark) HeadingPurpleDark else HeadingPurpleLight
+        AccentColor.Gray -> if (dark) HeadingGrayDark else HeadingGrayLight
+        AccentColor.Red -> if (dark) HeadingRedDark else HeadingRedLight
+        AccentColor.Pink -> if (dark) HeadingPinkDark else HeadingPinkLight
+        AccentColor.Indigo -> if (dark) HeadingIndigoDark else HeadingIndigoLight
+        AccentColor.Brown -> if (dark) HeadingBrownDark else HeadingBrownLight
+        AccentColor.Auto -> Color.Unspecified // resolved after colorScheme is created
+    }
+}
+
 @Composable
 fun VaultTheme(
     themeMode: ThemeMode = ThemeMode.System,
@@ -492,13 +517,23 @@ fun VaultTheme(
         )
     }
 
+    val headingColor = if (accentColor == AccentColor.Auto) {
+        colorScheme.tertiary
+    } else {
+        headingColorForAccent(accentColor, darkTheme)
+    }
+    val vaultColors = VaultColors(cardHeading = headingColor)
+
     val typography = scaledTypography(fontScale)
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = typography,
     ) {
-        CompositionLocalProvider(LocalGlassColors provides glassColors) {
+        CompositionLocalProvider(
+            LocalGlassColors provides glassColors,
+            LocalVaultColors provides vaultColors
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

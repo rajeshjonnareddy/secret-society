@@ -26,12 +26,16 @@ import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -56,6 +60,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lonley.dev.vault.model.EntryType
+import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
@@ -77,7 +82,11 @@ fun AddPasswordContent(
         startDate: Long?,
         reminderEnabled: Boolean,
         entryType: EntryType,
-        phraseWordCount: Int?
+        phraseWordCount: Int?,
+        walletAddress: String?,
+        seedPhrase: String?,
+        network: Network?,
+        exchange: String?
     ) -> Unit,
     onCancel: () -> Unit,
     hapticsEnabled: Boolean = false,
@@ -98,8 +107,14 @@ fun AddPasswordContent(
 
     // Entry type fields
     var selectedEntryType by remember { mutableStateOf(EntryType.Password) }
-    var selectedWordCount by remember { mutableStateOf(12) }
-    var phraseWords by remember { mutableStateOf(List(24) { "" }) }
+
+    // Digital wallet fields
+    var walletAddress by remember { mutableStateOf("") }
+    var seedPhraseWords by remember { mutableStateOf(List(24) { "" }) }
+    var selectedSeedWordCount by remember { mutableStateOf(12) }
+    var selectedNetwork by remember { mutableStateOf<Network?>(null) }
+    var networkDropdownExpanded by remember { mutableStateOf(false) }
+    var exchange by remember { mutableStateOf("") }
 
     // Subscription fields
     var isSubscription by remember { mutableStateOf(false) }
@@ -111,10 +126,11 @@ fun AddPasswordContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showGeneratorDialog by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && if (selectedEntryType == EntryType.Password) {
-        password.isNotBlank()
-    } else {
-        phraseWords.take(selectedWordCount).all { it.isNotBlank() }
+    val hasSeedPhrase = seedPhraseWords.take(selectedSeedWordCount).all { it.isNotBlank() }
+    val isFormValid = name.isNotBlank() && when (selectedEntryType) {
+        EntryType.Password -> password.isNotBlank()
+        EntryType.CryptoWallet -> walletAddress.isNotBlank() || hasSeedPhrase
+        else -> false
     }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
@@ -125,7 +141,11 @@ fun AddPasswordContent(
             .padding(horizontal = 24.dp)
     ) {
         Text(
-            text = if (isSubscription) "Add Subscription" else "Add Password",
+            text = when {
+                selectedEntryType == EntryType.CryptoWallet -> "Add Digital Wallet"
+                isSubscription -> "Add Subscription"
+                else -> "Add Password"
+            },
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -134,7 +154,11 @@ fun AddPasswordContent(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = if (isSubscription) "Track a new subscription." else "Save a new credential to your vault.",
+            text = when {
+                selectedEntryType == EntryType.CryptoWallet -> "Store a wallet address and recovery phrase."
+                isSubscription -> "Track a new subscription."
+                else -> "Save a new credential to your vault."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -159,72 +183,198 @@ fun AddPasswordContent(
                 label = { Text("Password") }
             )
             FilterChip(
-                selected = selectedEntryType == EntryType.Passphrase,
+                selected = selectedEntryType == EntryType.CryptoWallet,
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
-                    selectedEntryType = EntryType.Passphrase
+                    selectedEntryType = EntryType.CryptoWallet
                     password = ""
                     onInteraction()
                 },
-                label = { Text("Passphrase") }
+                label = { Text("Digital Wallet") }
             )
         }
 
-        AnimatedVisibility(visible = selectedEntryType == EntryType.Passphrase) {
+        AnimatedVisibility(visible = selectedEntryType == EntryType.CryptoWallet) {
             Column {
                 Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = walletAddress,
+                    onValueChange = { walletAddress = it; onInteraction() },
+                    label = { Text("Wallet Address") },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = fieldShape
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; onInteraction() },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    isError = nameDirty && name.isBlank(),
+                    supportingText = if (nameDirty && name.isBlank()) {
+                        { Text("Name is required") }
+                    } else null,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Badge,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (!it.isFocused) nameDirty = true },
+                    shape = fieldShape
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
-                    text = "Word Count",
+                    text = "Seed Phrase Word Count",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
-                        selected = selectedWordCount == 12,
+                        selected = selectedSeedWordCount == 12,
                         onClick = {
                             HapticHelper.performClick(view, hapticsEnabled)
-                            selectedWordCount = 12
+                            selectedSeedWordCount = 12
                             onInteraction()
                         },
                         label = { Text("12 Words") }
                     )
                     FilterChip(
-                        selected = selectedWordCount == 24,
+                        selected = selectedSeedWordCount == 24,
                         onClick = {
                             HapticHelper.performClick(view, hapticsEnabled)
-                            selectedWordCount = 24
+                            selectedSeedWordCount = 24
                             onInteraction()
                         },
                         label = { Text("24 Words") }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                val seedFilledCount = seedPhraseWords.take(selectedSeedWordCount).count { it.isNotBlank() }
+                Text(
+                    text = "$seedFilledCount / $selectedSeedWordCount words filled",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PassphraseWordFields(
+                    words = seedPhraseWords,
+                    wordCount = selectedSeedWordCount,
+                    onWordChange = { index, value ->
+                        seedPhraseWords = seedPhraseWords.toMutableList().also { it[index] = value }
+                        onInteraction()
+                    },
+                    fieldShape = fieldShape
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = networkDropdownExpanded,
+                    onExpandedChange = {
+                        networkDropdownExpanded = it
+                        onInteraction()
+                    }
+                ) {
+                    OutlinedTextField(
+                        value = selectedNetwork?.label ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Network (Optional)") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = networkDropdownExpanded) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        shape = fieldShape
+                    )
+                    ExposedDropdownMenu(
+                        expanded = networkDropdownExpanded,
+                        onDismissRequest = { networkDropdownExpanded = false }
+                    ) {
+                        Network.entries.forEach { net ->
+                            DropdownMenuItem(
+                                text = { Text(net.label) },
+                                onClick = {
+                                    HapticHelper.performClick(view, hapticsEnabled)
+                                    selectedNetwork = net
+                                    networkDropdownExpanded = false
+                                    onInteraction()
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = exchange,
+                    onValueChange = { exchange = it; onInteraction() },
+                    label = { Text("Exchange (Optional)") },
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Language,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = fieldShape
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it; onInteraction() },
-            label = { Text("Name") },
-            singleLine = true,
-            isError = nameDirty && name.isBlank(),
-            supportingText = if (nameDirty && name.isBlank()) {
-                { Text("Name is required") }
-            } else null,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Badge,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { if (!it.isFocused) nameDirty = true },
-            shape = fieldShape
-        )
+        if (selectedEntryType != EntryType.CryptoWallet) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it; onInteraction() },
+                label = { Text("Name") },
+                singleLine = true,
+                isError = nameDirty && name.isBlank(),
+                supportingText = if (nameDirty && name.isBlank()) {
+                    { Text("Name is required") }
+                } else null,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Badge,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { if (!it.isFocused) nameDirty = true },
+                shape = fieldShape
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -297,23 +447,6 @@ fun AddPasswordContent(
                     .fillMaxWidth()
                     .onFocusChanged { if (!it.isFocused) passwordDirty = true },
                 shape = fieldShape
-            )
-        } else {
-            val filledCount = phraseWords.take(selectedWordCount).count { it.isNotBlank() }
-            Text(
-                text = "$filledCount / $selectedWordCount words filled",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            PassphraseWordFields(
-                words = phraseWords,
-                wordCount = selectedWordCount,
-                onWordChange = { index, value ->
-                    phraseWords = phraseWords.toMutableList().also { it[index] = value }
-                    onInteraction()
-                },
-                fieldShape = fieldShape
             )
         }
 
@@ -555,8 +688,9 @@ fun AddPasswordContent(
             Button(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
-                    val finalPassword = if (selectedEntryType == EntryType.Passphrase) {
-                        phraseWords.take(selectedWordCount).joinToString(" ") { it.trim() }
+                    val isWallet = selectedEntryType == EntryType.CryptoWallet
+                    val finalPassword = if (isWallet) {
+                        seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() }
                     } else password
                     onConfirm(
                         name, username, email, finalPassword, website, comments,
@@ -565,7 +699,11 @@ fun AddPasswordContent(
                         subscriptionEmail.ifBlank { null },
                         startDate, reminderEnabled,
                         selectedEntryType,
-                        if (selectedEntryType == EntryType.Passphrase) selectedWordCount else null
+                        null,
+                        if (isWallet) walletAddress else null,
+                        if (isWallet) seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() } else null,
+                        if (isWallet) selectedNetwork else null,
+                        if (isWallet) exchange.ifBlank { null } else null
                     )
                 },
                 enabled = isFormValid,
@@ -682,7 +820,7 @@ fun PassphraseWordFields(
 private fun AddPasswordContentPreview() {
     VaultTheme {
         AddPasswordContent(
-            onConfirm = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
             onCancel = {}
         )
     }

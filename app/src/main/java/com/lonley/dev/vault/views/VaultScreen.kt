@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
@@ -93,6 +94,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lonley.dev.vault.ui.theme.LocalGlassColors
+import com.lonley.dev.vault.ui.theme.LocalVaultColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
@@ -262,13 +264,20 @@ private fun PasswordEntryItem(
                                 text = entry.name.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = LocalVaultColors.current.cardHeading,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (entry.entryType == EntryType.Passphrase) {
                                 Text(
                                     text = "${entry.phraseWordCount ?: entry.password.trim().split("\\s+".toRegex()).size}-word passphrase",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                            if (entry.entryType == EntryType.CryptoWallet) {
+                                Text(
+                                    text = entry.network?.label ?: "Digital Wallet",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.tertiary
                                 )
@@ -719,6 +728,7 @@ fun VaultScreen(
         FilterPill("All", Icons.Outlined.Password, count = passwordEntries.size),
         FilterPill("Favorites", Icons.Outlined.Favorite, count = passwordEntries.count { it.isFavorite }),
         FilterPill("Subscriptions", Icons.Outlined.Subscriptions, count = passwordEntries.count { it.isSubscription }),
+        FilterPill("Wallets", Icons.Outlined.AccountBalanceWallet, count = passwordEntries.count { it.entryType == EntryType.CryptoWallet }),
         FilterPill("Websites", Icons.Outlined.Language, count = passwordEntries.count { !it.website.isNullOrBlank() }),
         FilterPill("Apps", Icons.Outlined.Apps),
         FilterPill("Social", Icons.Outlined.People),
@@ -730,10 +740,13 @@ fun VaultScreen(
         val matchesSearch = searchQuery.isBlank() ||
                 entry.name.contains(searchQuery, ignoreCase = true) ||
                 (entry.username?.contains(searchQuery, ignoreCase = true) == true) ||
-                (entry.email?.contains(searchQuery, ignoreCase = true) == true)
+                (entry.email?.contains(searchQuery, ignoreCase = true) == true) ||
+                (entry.walletAddress?.contains(searchQuery, ignoreCase = true) == true) ||
+                (entry.exchange?.contains(searchQuery, ignoreCase = true) == true)
         val matchesFilter = selectedFilter == "All" || when (selectedFilter) {
             "Favorites" -> entry.isFavorite
             "Subscriptions" -> entry.isSubscription
+            "Wallets" -> entry.entryType == EntryType.CryptoWallet
             "Websites" -> !entry.website.isNullOrBlank()
             else -> true
         }

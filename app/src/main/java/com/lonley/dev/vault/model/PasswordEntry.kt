@@ -17,5 +17,9 @@ data class PasswordEntry(
     val startDate: Long? = null,
     val reminderEnabled: Boolean = false,
     val entryType: EntryType = EntryType.Password,
-    val phraseWordCount: Int? = null
+    val phraseWordCount: Int? = null,
+    val walletAddress: String? = null,
+    val seedPhrase: String? = null,
+    val network: Network? = null,
+    val exchange: String? = null
 )

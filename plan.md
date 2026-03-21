@@ -1,101 +1,169 @@
-# Plan: Fix renewal date calculation + price currency input
+# Plan: Crypto Wallet Entry Type + Complementary Card Accent Colors
 
-## Problem 1: Incorrect next renewal date calculation
+## Feature 1: Crypto Wallet Entry Type
 
-**Current behavior:** `nextRenewalDate()` adds a fixed number of days (30 for Monthly, 365 for Yearly) repeatedly from the start date. This drifts over time — "Monthly" isn't always 30 days, and "Yearly" isn't always 365 days.
+### Concept
+Add `CryptoWallet` as a third `EntryType` alongside `Password` and `Passphrase`. A crypto wallet entry stores seed phrases, wallet addresses, network info, and optional private keys — all encrypted locally like existing entries.
 
-**Desired behavior:** Use proper calendar math. From the start date, calculate the **same day of the next month** (or next year for yearly, next week for weekly) relative to today. E.g., if start date is Jan 31, monthly renewal → Feb 28, Mar 31, Apr 30, etc.
+### Data Model Changes
 
-### Changes
+**`model/EntryType.kt`** — Add new enum value:
+```kotlin
+enum class EntryType { Password, Passphrase, CryptoWallet }
+```
 
-**File: `model/PlanType.kt`**
-- Remove `periodDays` from enum (no longer needed)
-- Rewrite `nextRenewalDate()` using `java.time.LocalDate`:
-  1. Convert `startDate` (epoch millis) to `LocalDate`
-  2. Get today as `LocalDate`
-  3. Starting from the start date, advance by the plan period (`.plusWeeks(1)`, `.plusMonths(1)`, `.plusYears(1)`) until we land on a date >= today
-  4. Convert back to epoch millis and return
-- This handles month-end edge cases correctly (Java's `plusMonths` clamps to last valid day)
+**`model/PasswordEntry.kt`** — Add crypto-specific nullable fields:
+```kotlin
+val walletAddress: String? = null,       // Public wallet address (e.g. 0x...)
+val network: CryptoNetwork? = null,      // Bitcoin, Ethereum, Solana, etc.
+val privateKey: String? = null,          // Optional private key
+val walletName: String? = null,          // e.g. "MetaMask", "Ledger", "Trust Wallet"
+```
+The existing `password` field stores the seed phrase (same as Passphrase type). The existing `phraseWordCount` (12/24) is reused.
+
+**New file `model/CryptoNetwork.kt`**:
+```kotlin
+enum class CryptoNetwork(val label: String, val symbol: String) {
+    Bitcoin("Bitcoin", "BTC"),
+    Ethereum("Ethereum", "ETH"),
+    Solana("Solana", "SOL"),
+    Polygon("Polygon", "MATIC"),
+    BNBChain("BNB Chain", "BNB"),
+    Avalanche("Avalanche", "AVAX"),
+    Cardano("Cardano", "ADA"),
+    XRP("XRP", "XRP"),
+    Other("Other", "")
+}
+```
+
+### Repository Changes
+
+**`repository/VaultRepository.kt`**:
+- `saveVault()`: Add `put("walletAddress", ...)`, `put("network", ...)`, `put("privateKey", ...)`, `put("walletName", ...)`
+- `parseEntries()`: Read with `optString` + null fallback, parse `CryptoNetwork` enum same pattern as `PlanType`
+
+### ViewModel Changes
+
+**`viewmodel/VaultViewModel.kt`**:
+- `addPassword()`: Accept 4 new crypto params, pass to `PasswordEntry` constructor
+- `updatePassword()`: Copy 4 new crypto fields during entry replacement
+
+### UI Changes
+
+**`views/AddPasswordSheet.kt`**:
+- Add third `FilterChip` in type selector: "Crypto Wallet"
+- When `CryptoWallet` selected, show:
+  - `walletName` text field (e.g. "MetaMask", "Ledger") with wallet icon
+  - `CryptoNetwork` chip row (scrollable, 9 options)
+  - Seed phrase fields (reuse `PassphraseWordFields` + 12/24 word count selector)
+  - `walletAddress` text field (public address) with copy icon
+  - Optional `privateKey` masked password field (visibility toggle)
+- Hide `username`, `email`, `website` fields when CryptoWallet is selected
+- Form validation: `name` + all seed words required; walletAddress/privateKey optional
+- Update `onConfirm` callback to pass new fields
+
+**`views/PasswordDetailDialog.kt`**:
+- `PasswordDetailScreen`: When `CryptoWallet`:
+  - Show wallet name + network as header subtitle (e.g. "MetaMask · Ethereum")
+  - Wallet address row with copy button
+  - Seed phrase grid (reuse `PassphraseGridSection` with blur)
+  - Private key row (masked + visibility toggle + copy) — only if present
+  - Hide username/email rows
+- `PasswordEditScreen`: Mirror AddPasswordSheet's crypto fields, pre-populate from entry
+
+**`views/VaultScreen.kt`**:
+- `PasswordEntryItem` card: When crypto wallet, show `"{network.symbol} · {walletName}"` where username normally goes
+- Add `"Crypto"` filter pill: `FilterPill("Crypto", Icons.Outlined.AccountBalanceWallet, count = passwordEntries.count { it.entryType == EntryType.CryptoWallet })`
+- Add filter case in `filteredEntries`: `"Crypto" -> entry.entryType == EntryType.CryptoWallet`
+
+**`VaultApp.kt`**:
+- Pass new crypto fields through navigation callbacks (add/edit flows)
+
+### Icon
+Use `Icons.Outlined.AccountBalanceWallet` for crypto wallet entries and filter pill (already in material-icons-extended).
+
+---
+
+## Feature 2: Complementary Card Accent Color
+
+### Problem
+Every heading, icon, and interactive element uses `colorScheme.primary` — the user's chosen accent. This creates a monochrome look where card entry names blend into the theme chrome.
+
+### Approach: Use Material 3's `tertiary` color
+Every accent color scheme already defines a `tertiary` that's intentionally complementary to `primary`. No new color logic needed — just use what's already there.
+
+| User's Accent | Primary (theme/icons) | Tertiary (card headings) |
+|---|---|---|
+| Blue | Blue (#4285F4) | Purple (#7B5EA7) |
+| Teal | Teal (#009688) | Blue-gray (#48617A) |
+| Green | Green (#4CAF50) | Teal (#38656A) |
+| Red | Red (#E53935) | Amber (#755A2F) |
+| Purple | Purple (#9C27B0) | Rose (#815249) |
+| Orange | Orange (#FF9800) | Olive (#56633B) |
+| Pink | Pink (#E91E63) | Brown (#7C5635) |
+| Indigo | Indigo (#3F51B5) | Rose (#78536B) |
+| Yellow | Yellow (#F9A825) | Green (#4B6546) |
+| Gray | Gray (#607D8B) | Lavender (#605B7D) |
+| Brown | Brown (#795548) | Olive (#636032) |
+
+### Implementation
+
+**`ui/theme/Theme.kt`** — New composition local:
+```kotlin
+data class CardAccentColors(
+    val heading: Color,
+    val headingVariant: Color
+)
+
+val LocalCardAccent = staticCompositionLocalOf {
+    CardAccentColors(heading = Color.Unspecified, headingVariant = Color.Unspecified)
+}
+```
+
+In `VaultTheme`:
+```kotlin
+val cardAccent = CardAccentColors(
+    heading = colorScheme.tertiary,
+    headingVariant = colorScheme.onTertiaryContainer
+)
+CompositionLocalProvider(
+    LocalGlassColors provides glassColors,
+    LocalCardAccent provides cardAccent
+) { ... }
+```
+
+**`views/VaultScreen.kt`** — Swap colors in `PasswordEntryItem`:
+- Entry name `Text` → `LocalCardAccent.current.heading` (was `colorScheme.primary`)
+- Passphrase label → `LocalCardAccent.current.heading`
+
+**Keep `colorScheme.primary` for:**
+- Vault title heading (brand identity)
+- All icons and icon buttons
+- Filter pills, search bar, action buttons
+- Detail/edit screen field icons
+
+This creates a two-tone palette where card names pop against the theme chrome.
 
 ---
 
-## Problem 2: Notification schedule — 5 days before, daily, then 3x on renewal day
+## File Change Summary
 
-**Current behavior:** `RenewalCheckWorker` runs once per day and only notifies within a 3-day window. Sends one notification per check. No multiple notifications on renewal day.
-
-**Desired behavior:**
-- Notifications start **5 days before** renewal (days 5, 4, 3, 2, 1 before)
-- On renewal day itself, send **3 notifications** (morning, afternoon, evening)
-- Worker already runs daily via WorkManager — change the window from 3 days to 5 days
-
-### Changes
-
-**File: `notification/RenewalCheckWorker.kt`**
-- Change window from `threeDaysMs` (3 days) to `fiveDaysMs` (5 days)
-- When `daysUntil == 0` (renewal day), send 3 notifications with distinct IDs and different messages:
-  - "Morning reminder: {name} renews today!"
-  - "Afternoon reminder: {name} renews today!"
-  - "Evening reminder: Don't forget — {name} renews today!"
-- For days 1–5 before, send one notification as before (already works)
-
-**File: `notification/VaultNotificationHelper.kt`**
-- Add a `sendRenewalDayNotifications()` method that sends 3 notifications with different text and unique notification IDs
-
-**File: `viewmodel/VaultViewModel.kt` `syncReminders()`**
-- No structural change needed — it stores `nextRenewalDate()` which will now return correct calendar-based dates
-
----
-
-## Problem 3: Price text field — currency-style input (right-to-left digits, always 2 decimals)
-
-**Current behavior:** Free-form decimal input. User types "99" and gets "99". Manual dot placement.
-
-**Desired behavior:** Currency-style input where digits fill from the right with an implied 2-decimal-place format:
-- Type `9` → `0.09`
-- Type `99` → `0.99`
-- Type `999` → `9.99`
-- Type `9999` → `99.99`
-- Type `99999` → `999.99`
-- Backspace removes the last digit and shifts right
-
-### Changes
-
-**File: `views/AddPasswordSheet.kt`** — Price `OutlinedTextField` (~line 339)
-- Replace `onValueChange` logic with currency formatter:
-  1. Strip all non-digit characters from input
-  2. Limit to max 7 digits (99999.99 = 7 digits)
-  3. Store raw digits in state, display formatted: insert decimal 2 places from the right
-  4. Use a `VisualTransformation` or format the display string directly
-- Approach: store `price` as raw digit string (e.g. "999"), display as formatted ("9.99")
-- On save, the formatted value is what gets passed to `onConfirm`
-
-**File: `views/PasswordDetailDialog.kt`** — Edit screen price `OutlinedTextField` (~line 888)
-- Same currency formatting logic
-- On init, convert existing `entry.price` (e.g. "9.99") back to raw digits ("999")
-
-### Helper function (shared between both files)
-- Add a `formatCurrencyInput(rawDigits: String): String` utility either as a top-level function in one of the files or a small helper
-- Logic: pad to at least 3 chars, insert "." before last 2 digits, strip unnecessary leading zeros
-
----
-
-## Files to modify
-
-| File | Change |
-|------|--------|
-| `model/PlanType.kt` | Remove `periodDays`, rewrite `nextRenewalDate()` with `LocalDate` calendar math |
-| `notification/RenewalCheckWorker.kt` | Expand window to 5 days; send 3 notifications on renewal day |
-| `notification/VaultNotificationHelper.kt` | Support multiple renewal-day notification messages |
-| `views/AddPasswordSheet.kt` | Currency-style price input formatting |
-| `views/PasswordDetailDialog.kt` | Currency-style price input formatting (edit screen) |
-
----
+| File | Crypto Wallet | Card Accent |
+|---|---|---|
+| `model/EntryType.kt` | Add `CryptoWallet` | — |
+| `model/PasswordEntry.kt` | Add 4 fields | — |
+| `model/CryptoNetwork.kt` | **New file** | — |
+| `repository/VaultRepository.kt` | Serialize/parse 4 fields | — |
+| `viewmodel/VaultViewModel.kt` | Pass 4 fields in add/update | — |
+| `views/AddPasswordSheet.kt` | Crypto wallet form UI | — |
+| `views/PasswordDetailDialog.kt` | Crypto detail + edit views | — |
+| `views/VaultScreen.kt` | Crypto card display + filter | Heading color → tertiary |
+| `ui/theme/Theme.kt` | — | `LocalCardAccent` + provide |
+| `VaultApp.kt` | Pass fields in callbacks | — |
 
 ## Verification
-
-- `gradlew.bat assembleDebug` compiles
-- Monthly renewal from Jan 31 → Feb 28 (not March 2)
-- Yearly renewal from Feb 29 2024 → Feb 28 2025
-- Price field: typing "12345" displays "123.45"
-- Backspace on "123.45" → "12.34"
-- Notifications fire at days 5, 4, 3, 2, 1 before renewal + 3x on renewal day
+- `gradlew.bat assembleDebug` passes after each feature
+- Add a crypto wallet entry → seed phrase grid, wallet address, network all saved and displayed
+- Filter by "Crypto" → shows only wallet entries
+- Card headings use tertiary (complementary) color, icons/buttons stay primary
+- Both dark and light modes look correct

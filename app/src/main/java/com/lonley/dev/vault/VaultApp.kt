@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -64,6 +65,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.FontScale
+import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.ChangePasswordState
@@ -236,7 +238,11 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showChangePassword by remember { mutableStateOf(false) }
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
-            val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            var addSheetDismissAllowed by remember { mutableStateOf(false) }
+            val addSheetState = rememberModalBottomSheetState(
+                skipPartiallyExpanded = true,
+                confirmValueChange = { it != androidx.compose.material3.SheetValue.Hidden || addSheetDismissAllowed }
+            )
             val scope = rememberCoroutineScope()
             val clipboardManager = LocalClipboardManager.current
             val isSuspended by viewModel.isSuspended.collectAsState()
@@ -357,8 +363,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                 showProfile = false
             }
             BackHandler(enabled = showAddSheet) {
-                scope.launch { addSheetState.hide() }.invokeOnCompletion {
-                    if (!addSheetState.isVisible) showAddSheet = false
+                addSheetDismissAllowed = true
+                scope.launch {
+                    addSheetState.hide()
+                    showAddSheet = false
+                    addSheetDismissAllowed = false
                 }
             }
 
@@ -426,7 +435,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                             onSave = { id, name, username, email, password, website, comments,
                                        isFavorite, isSubscription, planType, price,
                                        subscriptionEmail, startDate, reminderEnabled,
-                                       entryType, phraseWordCount ->
+                                       entryType, phraseWordCount,
+                                       walletAddress, seedPhrase, network, exchange ->
                                 viewModel.resetAutoLockTimer()
                                 if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -446,7 +456,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     startDate = startDate,
                                     reminderEnabled = reminderEnabled,
                                     entryType = entryType,
-                                    phraseWordCount = phraseWordCount
+                                    phraseWordCount = phraseWordCount,
+                                    walletAddress = walletAddress,
+                                    seedPhrase = seedPhrase,
+                                    network = network,
+                                    exchange = exchange
                                 )
                                 val updated = entry.copy(
                                     name = name,
@@ -463,7 +477,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     startDate = startDate,
                                     reminderEnabled = reminderEnabled,
                                     entryType = entryType,
-                                    phraseWordCount = phraseWordCount
+                                    phraseWordCount = phraseWordCount,
+                                    walletAddress = walletAddress,
+                                    seedPhrase = seedPhrase,
+                                    network = network,
+                                    exchange = exchange
                                 )
                                 selectedEntry = updated
                                 editingEntry = null
@@ -704,10 +722,10 @@ fun VaultApp(viewModel: VaultViewModel) {
 
             if (showAddSheet) {
                 ModalBottomSheet(
-                    onDismissRequest = { showAddSheet = false },
+                    onDismissRequest = { /* Dismiss only via Cancel/Save buttons */ },
                     sheetState = addSheetState
                 ) {
-                    Box(modifier = Modifier.pointerInput(Unit) {
+                    Box(modifier = Modifier.fillMaxHeight(0.85f).pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 awaitPointerEvent(PointerEventPass.Initial)
@@ -718,7 +736,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                     AddPasswordContent(
                         onConfirm = { name, username, email, password, website, comments,
                                       isSubscription, planType, price, subscriptionEmail,
-                                      startDate, reminderEnabled, entryType, phraseWordCount ->
+                                      startDate, reminderEnabled, entryType, phraseWordCount,
+                                      walletAddress, seedPhrase, network, exchange ->
                             viewModel.resetAutoLockTimer()
                             if (reminderEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -737,17 +756,27 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 startDate = startDate,
                                 reminderEnabled = reminderEnabled,
                                 entryType = entryType,
-                                phraseWordCount = phraseWordCount
+                                phraseWordCount = phraseWordCount,
+                                walletAddress = walletAddress,
+                                seedPhrase = seedPhrase,
+                                network = network,
+                                exchange = exchange
                             )
                             generatedPasswordForAdd = ""
-                            scope.launch { addSheetState.hide() }.invokeOnCompletion {
-                                if (!addSheetState.isVisible) showAddSheet = false
+                            addSheetDismissAllowed = true
+                            scope.launch {
+                                addSheetState.hide()
+                                showAddSheet = false
+                                addSheetDismissAllowed = false
                             }
                         },
                         onCancel = {
                             generatedPasswordForAdd = ""
-                            scope.launch { addSheetState.hide() }.invokeOnCompletion {
-                                if (!addSheetState.isVisible) showAddSheet = false
+                            addSheetDismissAllowed = true
+                            scope.launch {
+                                addSheetState.hide()
+                                showAddSheet = false
+                                addSheetDismissAllowed = false
                             }
                         },
                         hapticsEnabled = settingsState.hapticsEnabled,

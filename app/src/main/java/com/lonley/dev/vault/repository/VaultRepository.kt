@@ -2,6 +2,7 @@ package com.lonley.dev.vault.repository
 
 import com.lonley.dev.vault.crypto.VaultCrypto
 import com.lonley.dev.vault.model.EntryType
+import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.util.VaultLogger
@@ -91,6 +92,10 @@ class VaultRepository(private val filesDir: File) {
                 put("reminderEnabled", entry.reminderEnabled)
                 put("entryType", entry.entryType.name)
                 put("phraseWordCount", entry.phraseWordCount ?: JSONObject.NULL)
+                put("walletAddress", entry.walletAddress ?: JSONObject.NULL)
+                put("seedPhrase", entry.seedPhrase ?: JSONObject.NULL)
+                put("network", entry.network?.name ?: JSONObject.NULL)
+                put("exchange", entry.exchange ?: JSONObject.NULL)
             })
         }
         metadata.put("passwords", passwordsArray)
@@ -168,9 +173,17 @@ class VaultRepository(private val filesDir: File) {
                 startDate = if (obj.isNull("startDate")) null else obj.optLong("startDate", 0L).takeIf { it > 0 },
                 reminderEnabled = obj.optBoolean("reminderEnabled", false),
                 entryType = obj.optString("entryType", "").let { name ->
-                    EntryType.entries.firstOrNull { it.name == name } ?: EntryType.Password
+                    val parsed = EntryType.entries.firstOrNull { it.name == name } ?: EntryType.Password
+                    // Migrate old Passphrase entries to CryptoWallet
+                    if (parsed == EntryType.Passphrase) EntryType.CryptoWallet else parsed
                 },
-                phraseWordCount = if (obj.isNull("phraseWordCount")) null else obj.optInt("phraseWordCount", 0).takeIf { it > 0 }
+                phraseWordCount = if (obj.isNull("phraseWordCount")) null else obj.optInt("phraseWordCount", 0).takeIf { it > 0 },
+                walletAddress = if (obj.isNull("walletAddress")) null else obj.optString("walletAddress").ifBlank { null },
+                seedPhrase = if (obj.isNull("seedPhrase")) null else obj.optString("seedPhrase").ifBlank { null },
+                network = obj.optString("network", "").let { name ->
+                    Network.entries.firstOrNull { it.name == name }
+                },
+                exchange = if (obj.isNull("exchange")) null else obj.optString("exchange").ifBlank { null }
             )
         }
     }

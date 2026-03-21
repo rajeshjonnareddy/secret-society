@@ -43,12 +43,16 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -83,7 +87,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.drop
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import com.lonley.dev.vault.model.EntryType
+import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.SettingsState
@@ -208,7 +214,7 @@ fun PasswordDetailScreen(
             Text(
                 text = when {
                     entry.isSubscription -> "Your subscription."
-                    entry.entryType == EntryType.Passphrase -> "Your saved passphrase."
+                    entry.entryType == EntryType.CryptoWallet -> "Your digital wallet."
                     else -> "Your saved credential."
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -314,51 +320,106 @@ fun PasswordDetailScreen(
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
 
-                        // Password / Passphrase row
-                        if (entry.entryType == EntryType.Passphrase) {
-                            PassphraseGridSection(
-                                passphrase = entry.password,
-                                visible = passwordVisible,
-                                onToggleVisibility = {
-                                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                    passwordVisible = !passwordVisible
-                                },
-                                onCopy = {
-                                    HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                    onCopyToClipboard(entry.password)
+                        // Password / Digital Wallet row
+                        when (entry.entryType) {
+                            EntryType.CryptoWallet -> {
+                                if (!entry.walletAddress.isNullOrBlank()) {
+                                    DetailFieldRow(
+                                        icon = Icons.Outlined.AccountBalanceWallet,
+                                        iconTint = MaterialTheme.colorScheme.primary,
+                                        label = "Wallet Address",
+                                        value = entry.walletAddress,
+                                        trailingContent = {
+                                            IconButton(onClick = {
+                                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                                onCopyToClipboard(entry.walletAddress)
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy wallet address",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    )
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
                                 }
-                            )
-                        } else {
-                            DetailFieldRow(
-                                icon = Icons.Outlined.Lock,
-                                iconTint = MaterialTheme.colorScheme.primary,
-                                label = "Password",
-                                value = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
-                                trailingContent = {
-                                    IconButton(onClick = {
+                                if (entry.network != null) {
+                                    DetailFieldRow(
+                                        icon = Icons.Outlined.Language,
+                                        iconTint = MaterialTheme.colorScheme.primary,
+                                        label = "Network",
+                                        value = entry.network.label
+                                    )
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                                if (!entry.exchange.isNullOrBlank()) {
+                                    DetailFieldRow(
+                                        icon = Icons.Outlined.Language,
+                                        iconTint = MaterialTheme.colorScheme.primary,
+                                        label = "Exchange",
+                                        value = entry.exchange
+                                    )
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                                PassphraseGridSection(
+                                    passphrase = entry.seedPhrase ?: entry.password,
+                                    visible = passwordVisible,
+                                    onToggleVisibility = {
                                         HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
                                         passwordVisible = !passwordVisible
-                                    }) {
-                                        Icon(
-                                            imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    IconButton(onClick = {
+                                    },
+                                    onCopy = {
                                         HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                        onCopyToClipboard(entry.password)
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ContentCopy,
-                                            contentDescription = "Copy password",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                        onCopyToClipboard(entry.seedPhrase ?: entry.password)
                                     }
-                                }
-                            )
+                                )
+                            }
+                            else -> {
+                                DetailFieldRow(
+                                    icon = Icons.Outlined.Lock,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    label = "Password",
+                                    value = if (passwordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
+                                    trailingContent = {
+                                        IconButton(onClick = {
+                                            HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                            passwordVisible = !passwordVisible
+                                        }) {
+                                            Icon(
+                                                imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                            onCopyToClipboard(entry.password)
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = "Copy password",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
 
                         // Website row (conditional)
@@ -629,7 +690,8 @@ fun PasswordEditScreen(
         isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
         price: String?, subscriptionEmail: String?, startDate: Long?,
         reminderEnabled: Boolean,
-        entryType: EntryType, phraseWordCount: Int?
+        entryType: EntryType, phraseWordCount: Int?,
+        walletAddress: String?, seedPhrase: String?, network: Network?, exchange: String?
     ) -> Unit,
     onDelete: (id: String) -> Unit = {},
     onToggleFavorite: () -> Unit = {}
@@ -648,13 +710,26 @@ fun PasswordEditScreen(
 
     // Entry type fields
     var selectedEntryType by remember(entry) { mutableStateOf(entry.entryType) }
-    var selectedWordCount by remember(entry) { mutableStateOf(entry.phraseWordCount ?: 12) }
-    var phraseWords by remember(entry) {
-        val existingWords = if (entry.entryType == EntryType.Passphrase) {
-            entry.password.trim().split("\\s+".toRegex())
+
+    // Digital wallet fields
+    var walletAddress by remember(entry) { mutableStateOf(entry.walletAddress ?: "") }
+    var seedPhraseWords by remember(entry) {
+        val existingWords = if (entry.entryType == EntryType.CryptoWallet && !entry.seedPhrase.isNullOrBlank()) {
+            entry.seedPhrase.trim().split("\\s+".toRegex())
         } else emptyList()
         mutableStateOf(List(24) { i -> existingWords.getOrElse(i) { "" } })
     }
+    var selectedSeedWordCount by remember(entry) {
+        mutableStateOf(
+            if (entry.entryType == EntryType.CryptoWallet && !entry.seedPhrase.isNullOrBlank()) {
+                val count = entry.seedPhrase.trim().split("\\s+".toRegex()).size
+                if (count > 12) 24 else 12
+            } else 12
+        )
+    }
+    var selectedNetwork by remember(entry) { mutableStateOf(entry.network) }
+    var networkDropdownExpanded by remember { mutableStateOf(false) }
+    var editExchange by remember(entry) { mutableStateOf(entry.exchange ?: "") }
 
     // Subscription fields
     var isFavorite by remember(entry) { mutableStateOf(entry.isFavorite) }
@@ -674,10 +749,11 @@ fun PasswordEditScreen(
     var nameDirty by remember { mutableStateOf(false) }
     var passwordDirty by remember { mutableStateOf(false) }
 
-    val isFormValid = name.isNotBlank() && if (selectedEntryType == EntryType.Password) {
-        password.isNotBlank()
-    } else {
-        phraseWords.take(selectedWordCount).all { it.isNotBlank() }
+    val hasSeedPhrase = seedPhraseWords.take(selectedSeedWordCount).all { it.isNotBlank() }
+    val isFormValid = name.isNotBlank() && when (selectedEntryType) {
+        EntryType.Password -> password.isNotBlank()
+        EntryType.CryptoWallet -> walletAddress.isNotBlank() || hasSeedPhrase
+        else -> false
     }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
@@ -727,7 +803,11 @@ fun PasswordEditScreen(
             }
         }
         Text(
-            text = if (isSubscription) "Modify your subscription." else "Modify your saved credential.",
+            text = when {
+                selectedEntryType == EntryType.CryptoWallet -> "Modify your digital wallet."
+                isSubscription -> "Modify your subscription."
+                else -> "Modify your saved credential."
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -828,99 +908,184 @@ fun PasswordEditScreen(
                     label = { Text("Password") }
                 )
                 FilterChip(
-                    selected = selectedEntryType == EntryType.Passphrase,
+                    selected = selectedEntryType == EntryType.CryptoWallet,
                     onClick = {
                         HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                        selectedEntryType = EntryType.Passphrase
+                        selectedEntryType = EntryType.CryptoWallet
                     },
-                    label = { Text("Passphrase") }
+                    label = { Text("Digital Wallet") }
                 )
             }
 
-            AnimatedVisibility(visible = selectedEntryType == EntryType.Passphrase) {
+            AnimatedVisibility(visible = selectedEntryType == EntryType.CryptoWallet) {
                 Column {
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = walletAddress,
+                        onValueChange = { walletAddress = it },
+                        label = { Text("Wallet Address") },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
-                        text = "Word Count",
+                        text = "Seed Phrase Word Count",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = selectedWordCount == 12,
+                            selected = selectedSeedWordCount == 12,
                             onClick = {
                                 HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                selectedWordCount = 12
+                                selectedSeedWordCount = 12
                             },
                             label = { Text("12 Words") }
                         )
                         FilterChip(
-                            selected = selectedWordCount == 24,
+                            selected = selectedSeedWordCount == 24,
                             onClick = {
                                 HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                                selectedWordCount = 24
+                                selectedSeedWordCount = 24
                             },
                             label = { Text("24 Words") }
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val seedFilledCount = seedPhraseWords.take(selectedSeedWordCount).count { it.isNotBlank() }
+                    Text(
+                        text = "$seedFilledCount / $selectedSeedWordCount words filled",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PassphraseWordFields(
+                        words = seedPhraseWords,
+                        wordCount = selectedSeedWordCount,
+                        onWordChange = { index, value ->
+                            seedPhraseWords = seedPhraseWords.toMutableList().also { it[index] = value }
+                        },
+                        fieldShape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = networkDropdownExpanded,
+                        onExpandedChange = { networkDropdownExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedNetwork?.label ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Network (Optional)") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = networkDropdownExpanded) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Language,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            shape = fieldShape
+                        )
+                        ExposedDropdownMenu(
+                            expanded = networkDropdownExpanded,
+                            onDismissRequest = { networkDropdownExpanded = false }
+                        ) {
+                            Network.entries.forEach { net ->
+                                DropdownMenuItem(
+                                    text = { Text(net.label) },
+                                    onClick = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        selectedNetwork = net
+                                        networkDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = editExchange,
+                        onValueChange = { editExchange = it },
+                        label = { Text("Exchange (Optional)") },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (selectedEntryType == EntryType.Password) {
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    singleLine = true,
-                    isError = passwordDirty && password.isBlank(),
-                    supportingText = if (passwordDirty && password.isBlank()) {
-                        { Text("Password is required") }
-                    } else null,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                            passwordVisible = !passwordVisible
-                        }) {
+            when (selectedEntryType) {
+                EntryType.Password -> {
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        singleLine = true,
+                        isError = passwordDirty && password.isBlank(),
+                        supportingText = if (passwordDirty && password.isBlank()) {
+                            { Text("Password is required") }
+                        } else null,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        leadingIcon = {
                             Icon(
-                                imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { if (!it.isFocused) passwordDirty = true },
-                    shape = fieldShape
-                )
-            } else {
-                val filledCount = phraseWords.take(selectedWordCount).count { it.isNotBlank() }
-                Text(
-                    text = "$filledCount / $selectedWordCount words filled",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                PassphraseWordFields(
-                    words = phraseWords,
-                    wordCount = selectedWordCount,
-                    onWordChange = { index, value ->
-                        phraseWords = phraseWords.toMutableList().also { it[index] = value }
-                    },
-                    fieldShape = fieldShape
-                )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                passwordVisible = !passwordVisible
+                            }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { if (!it.isFocused) passwordDirty = true },
+                        shape = fieldShape
+                    )
+                }
+                EntryType.CryptoWallet -> {
+                    // Seed phrase fields are in the wallet section above
+                }
+                else -> { /* Passphrase entries are migrated to CryptoWallet */ }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1161,9 +1326,10 @@ fun PasswordEditScreen(
             Button(
                 onClick = {
                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                    val finalPassword = if (selectedEntryType == EntryType.Passphrase) {
-                        phraseWords.take(selectedWordCount).joinToString(" ") { it.trim() }
-                    } else password
+                    val finalPassword = when (selectedEntryType) {
+                        EntryType.CryptoWallet -> seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() }
+                        else -> password
+                    }
                     onSave(
                         entry.id, name, username, email, finalPassword,
                         website.ifBlank { null }, comments.ifBlank { null },
@@ -1171,7 +1337,11 @@ fun PasswordEditScreen(
                         price.ifBlank { null }, subscriptionEmail.ifBlank { null },
                         startDate, reminderEnabled,
                         selectedEntryType,
-                        if (selectedEntryType == EntryType.Passphrase) selectedWordCount else null
+                        null,
+                        if (selectedEntryType == EntryType.CryptoWallet) walletAddress else null,
+                        if (selectedEntryType == EntryType.CryptoWallet) seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() } else null,
+                        if (selectedEntryType == EntryType.CryptoWallet) selectedNetwork else null,
+                        if (selectedEntryType == EntryType.CryptoWallet) editExchange.ifBlank { null } else null
                     )
                 },
                 enabled = isFormValid,

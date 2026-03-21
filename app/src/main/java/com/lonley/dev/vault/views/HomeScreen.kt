@@ -7,7 +7,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import com.lonley.dev.vault.ui.theme.VaultTheme
 import com.lonley.dev.vault.util.HapticHelper
 import kotlinx.coroutines.delay
@@ -66,7 +70,11 @@ fun HomeScreen(
     val sloganParts = listOf("Data", "Device", "Rules")
     var currentSloganIndex by remember { mutableIntStateOf(0) }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var sheetDismissAllowed by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.Hidden || sheetDismissAllowed }
+    )
     var showCreateSheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -218,29 +226,44 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 
+    // Back button closes the sheet
+    BackHandler(enabled = showCreateSheet) {
+        sheetDismissAllowed = true
+        scope.launch {
+            sheetState.hide()
+            showCreateSheet = false
+            sheetDismissAllowed = false
+        }
+    }
+
     // Create Vault Bottom Sheet
     if (showCreateSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showCreateSheet = false },
+            onDismissRequest = { /* Dismiss only via Cancel/Confirm buttons */ },
             sheetState = sheetState
         ) {
+            Box(modifier = Modifier.fillMaxHeight(0.85f)) {
             CreateVaultContent(
                 hapticsEnabled = hapticsEnabled,
                 onConfirm = { vaultName, username, email, masterPassword, encryptionType ->
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            showCreateSheet = false
-                            // Call the lambda function to cretae new vault.
-                            createNewVault(vaultName, username, email,masterPassword, encryptionType)
-                        }
+                    sheetDismissAllowed = true
+                    scope.launch {
+                        sheetState.hide()
+                        showCreateSheet = false
+                        sheetDismissAllowed = false
+                        createNewVault(vaultName, username, email, masterPassword, encryptionType)
                     }
                 },
                 onCancel = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) showCreateSheet = false
+                    sheetDismissAllowed = true
+                    scope.launch {
+                        sheetState.hide()
+                        showCreateSheet = false
+                        sheetDismissAllowed = false
                     }
                 }
             )
+            }
         }
     }
 }

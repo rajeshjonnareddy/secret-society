@@ -11,6 +11,7 @@ import com.lonley.dev.vault.model.AutoLockTimeout
 import com.lonley.dev.vault.model.FontScale
 import com.lonley.dev.vault.crypto.RecoveryCrypto
 import com.lonley.dev.vault.model.EntryType
+import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.model.RecoveryState
@@ -484,7 +485,11 @@ class VaultViewModel(
         startDate: Long? = null,
         reminderEnabled: Boolean = false,
         entryType: EntryType = EntryType.Password,
-        phraseWordCount: Int? = null
+        phraseWordCount: Int? = null,
+        walletAddress: String? = null,
+        seedPhrase: String? = null,
+        network: Network? = null,
+        exchange: String? = null
     ) {
         val entry = PasswordEntry(
             id = UUID.randomUUID().toString(),
@@ -502,7 +507,11 @@ class VaultViewModel(
             startDate = startDate,
             reminderEnabled = reminderEnabled,
             entryType = entryType,
-            phraseWordCount = phraseWordCount
+            phraseWordCount = phraseWordCount,
+            walletAddress = walletAddress,
+            seedPhrase = seedPhrase,
+            network = network,
+            exchange = exchange
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
@@ -533,7 +542,11 @@ class VaultViewModel(
         startDate: Long? = null,
         reminderEnabled: Boolean = false,
         entryType: EntryType = EntryType.Password,
-        phraseWordCount: Int? = null
+        phraseWordCount: Int? = null,
+        walletAddress: String? = null,
+        seedPhrase: String? = null,
+        network: Network? = null,
+        exchange: String? = null
     ) {
         val index = entries.indexOfFirst { it.id == id }
         if (index == -1) return
@@ -553,7 +566,11 @@ class VaultViewModel(
             startDate = startDate,
             reminderEnabled = reminderEnabled,
             entryType = entryType,
-            phraseWordCount = phraseWordCount
+            phraseWordCount = phraseWordCount,
+            walletAddress = walletAddress,
+            seedPhrase = seedPhrase,
+            network = network,
+            exchange = exchange
         )
         lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value
