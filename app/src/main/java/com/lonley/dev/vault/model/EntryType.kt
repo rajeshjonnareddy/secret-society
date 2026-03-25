@@ -1,6 +1,6 @@
 package com.lonley.dev.vault.model
 
-enum class EntryType { Password, Passphrase, CryptoWallet }
+enum class EntryType { Password, Passphrase, CryptoWallet, Portfolio }
 
 enum class Network(val label: String) {
     Bitcoin("Bitcoin"), Ethereum("Ethereum"), Solana("Solana"),

@@ -489,7 +489,11 @@ class VaultViewModel(
         walletAddress: String? = null,
         seedPhrase: String? = null,
         network: Network? = null,
-        exchange: String? = null
+        exchange: String? = null,
+        tokenSymbol: String? = null,
+        tokenAmount: String? = null,
+        tokenValueUsd: String? = null,
+        l2Network: String? = null
     ) {
         val entry = PasswordEntry(
             id = UUID.randomUUID().toString(),
@@ -511,7 +515,11 @@ class VaultViewModel(
             walletAddress = walletAddress,
             seedPhrase = seedPhrase,
             network = network,
-            exchange = exchange
+            exchange = exchange,
+            tokenSymbol = tokenSymbol,
+            tokenAmount = tokenAmount,
+            tokenValueUsd = tokenValueUsd,
+            l2Network = l2Network
         )
         VaultLogger.i("ViewModel", "Adding password entry: name=${entry.name}, id=${entry.id}")
         entries.add(entry)
@@ -546,7 +554,11 @@ class VaultViewModel(
         walletAddress: String? = null,
         seedPhrase: String? = null,
         network: Network? = null,
-        exchange: String? = null
+        exchange: String? = null,
+        tokenSymbol: String? = null,
+        tokenAmount: String? = null,
+        tokenValueUsd: String? = null,
+        l2Network: String? = null
     ) {
         val index = entries.indexOfFirst { it.id == id }
         if (index == -1) return
@@ -570,7 +582,11 @@ class VaultViewModel(
             walletAddress = walletAddress,
             seedPhrase = seedPhrase,
             network = network,
-            exchange = exchange
+            exchange = exchange,
+            tokenSymbol = tokenSymbol,
+            tokenAmount = tokenAmount,
+            tokenValueUsd = tokenValueUsd,
+            l2Network = l2Network
         )
         lastUpdatedAt = System.currentTimeMillis()
         val currentState = _uiState.value

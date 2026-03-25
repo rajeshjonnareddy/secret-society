@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.CurrencyBitcoin
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
@@ -1271,6 +1272,7 @@ fun VaultBottomBar(
     onLockClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onDefiClick: () -> Unit,
     onGeneratePasswordClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onPrimaryAction: () -> Unit,
@@ -1345,6 +1347,26 @@ fun VaultBottomBar(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = "Profile",
                         tint = if (currentScreen == "profile") activeIconTint else iconTint,
+                        modifier = iconSize
+                    )
+                }
+                // DeFi
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onDefiClick()
+                }, modifier = Modifier
+                    .size(48.dp)
+                    .then(
+                        if (currentScreen == "defi") Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                        else Modifier
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.CurrencyBitcoin,
+                        contentDescription = "DeFi",
+                        tint = if (currentScreen == "defi") activeIconTint else iconTint,
                         modifier = iconSize
                     )
                 }
