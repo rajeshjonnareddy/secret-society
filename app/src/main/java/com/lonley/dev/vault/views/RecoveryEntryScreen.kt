@@ -1,5 +1,6 @@
 package com.lonley.dev.vault.views
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +57,13 @@ fun RecoveryEntryScreen(
             text = "Recover Vault",
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            modifier = Modifier.basicMarquee(
+                iterations = Int.MAX_VALUE,
+                initialDelayMillis = 1000,
+                repeatDelayMillis = 2000
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(

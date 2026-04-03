@@ -1,6 +1,7 @@
 package com.lonley.dev.vault.views
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -175,7 +177,14 @@ fun PasswordDetailScreen(
                     style = MaterialTheme.typography.displayLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f)
+                    maxLines = 1,
+                    modifier = Modifier
+                        .weight(1f)
+                        .basicMarquee(
+                            iterations = Int.MAX_VALUE,
+                            initialDelayMillis = 1000,
+                            repeatDelayMillis = 2000
+                        )
                 )
                 IconButton(
                     onClick = {
@@ -821,11 +830,18 @@ fun PasswordEditScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Edit entry",
+                text = name.ifBlank { entry.name }.replaceFirstChar { it.uppercaseChar() },
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f)
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 1000,
+                        repeatDelayMillis = 2000
+                    )
             )
             IconButton(
                 onClick = {
@@ -854,11 +870,7 @@ fun PasswordEditScreen(
             }
         }
         Text(
-            text = when {
-                selectedEntryType == EntryType.CryptoWallet -> "Modify your digital wallet."
-                isSubscription -> "Modify your subscription."
-                else -> "Modify your saved credential."
-            },
+            text = "Edit entry",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

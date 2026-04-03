@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -109,7 +110,13 @@ fun SettingsScreen(
                 text = "Settings",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    initialDelayMillis = 1000,
+                    repeatDelayMillis = 2000
+                )
             )
             Spacer(modifier = Modifier.height(24.dp))
 

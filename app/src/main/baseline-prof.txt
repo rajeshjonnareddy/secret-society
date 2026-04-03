@@ -1,0 +1,31 @@
+# Baseline Profile for Vault
+# Ensures critical paths are AOT-compiled at install time to reduce first-launch jank.
+
+# Compose runtime & UI
+HSPLandroidx/compose/runtime/**->**(**)**
+HSPLandroidx/compose/ui/**->**(**)**
+HSPLandroidx/compose/foundation/**->**(**)**
+HSPLandroidx/compose/animation/**->**(**)**
+HSPLandroidx/compose/material3/**->**(**)**
+HSPLandroidx/compose/material/**->**(**)**
+
+# Lifecycle & Activity
+HSPLandroidx/lifecycle/**->**(**)**
+HSPLandroidx/activity/**->**(**)**
+
+# Navigation
+HSPLandroidx/navigation/**->**(**)**
+
+# App classes
+HSPLcom/lonley/dev/vault/**->**(**)**
+Lcom/lonley/dev/vault/**;
+
+# Compose classes (for class loading)
+Landroidx/compose/runtime/**;
+Landroidx/compose/ui/**;
+Landroidx/compose/foundation/**;
+Landroidx/compose/animation/**;
+Landroidx/compose/material3/**;
+Landroidx/compose/material/**;
+Landroidx/lifecycle/**;
+Landroidx/activity/**;
