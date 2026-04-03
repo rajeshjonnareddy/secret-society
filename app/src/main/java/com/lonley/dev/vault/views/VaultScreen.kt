@@ -96,7 +96,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lonley.dev.vault.ui.theme.LocalGlassColors
-import com.lonley.dev.vault.ui.theme.LocalVaultColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
@@ -266,7 +265,7 @@ private fun PasswordEntryItem(
                                 text = entry.name.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = LocalVaultColors.current.cardHeading,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
