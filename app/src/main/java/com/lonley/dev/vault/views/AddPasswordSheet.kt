@@ -183,7 +183,6 @@ fun AddPasswordContent(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     selectedEntryType = EntryType.CryptoWallet
-                    password = ""
                     onInteraction()
                 },
                 label = { Text("Digital Wallet") }
@@ -268,6 +267,23 @@ fun AddPasswordContent(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Outlined.Language,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = fieldShape
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                PasswordTextField(
+                    value = password,
+                    onValueChange = { password = it; onInteraction() },
+                    label = "Password (Optional)",
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Lock,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -613,9 +629,7 @@ fun AddPasswordContent(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     val isWallet = selectedEntryType == EntryType.CryptoWallet
-                    val finalPassword = if (isWallet) {
-                        seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() }
-                    } else password
+                    val finalPassword = password
                     onConfirm(
                         name, username, email, finalPassword, website, comments,
                         isSubscription, selectedPlanType,

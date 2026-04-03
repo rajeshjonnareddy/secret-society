@@ -96,10 +96,6 @@ class VaultRepository(private val filesDir: File) {
                 put("seedPhrase", entry.seedPhrase ?: JSONObject.NULL)
                 put("network", entry.network?.name ?: JSONObject.NULL)
                 put("exchange", entry.exchange ?: JSONObject.NULL)
-                put("tokenSymbol", entry.tokenSymbol ?: JSONObject.NULL)
-                put("tokenAmount", entry.tokenAmount ?: JSONObject.NULL)
-                put("tokenValueUsd", entry.tokenValueUsd ?: JSONObject.NULL)
-                put("l2Network", entry.l2Network ?: JSONObject.NULL)
             })
         }
         metadata.put("passwords", passwordsArray)
@@ -187,11 +183,7 @@ class VaultRepository(private val filesDir: File) {
                 network = obj.optString("network", "").let { name ->
                     Network.entries.firstOrNull { it.name == name }
                 },
-                exchange = if (obj.isNull("exchange")) null else obj.optString("exchange").ifBlank { null },
-                tokenSymbol = if (obj.isNull("tokenSymbol")) null else obj.optString("tokenSymbol").ifBlank { null },
-                tokenAmount = if (obj.isNull("tokenAmount")) null else obj.optString("tokenAmount").ifBlank { null },
-                tokenValueUsd = if (obj.isNull("tokenValueUsd")) null else obj.optString("tokenValueUsd").ifBlank { null },
-                l2Network = if (obj.isNull("l2Network")) null else obj.optString("l2Network").ifBlank { null }
+                exchange = if (obj.isNull("exchange")) null else obj.optString("exchange").ifBlank { null }
             )
         }
     }

@@ -21,9 +21,5 @@ data class PasswordEntry(
     val walletAddress: String? = null,
     val seedPhrase: String? = null,
     val network: Network? = null,
-    val exchange: String? = null,
-    val tokenSymbol: String? = null,
-    val tokenAmount: String? = null,
-    val tokenValueUsd: String? = null,
-    val l2Network: String? = null
+    val exchange: String? = null
 )

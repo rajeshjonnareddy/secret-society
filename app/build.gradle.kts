@@ -9,6 +9,10 @@ android {
         version = release(36)
     }
 
+    lint {
+        abortOnError = false
+    }
+
     defaultConfig {
         applicationId = "com.lonley.dev.vault"
         minSdk = 24

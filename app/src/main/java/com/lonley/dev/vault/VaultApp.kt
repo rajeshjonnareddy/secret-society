@@ -77,9 +77,6 @@ import com.lonley.dev.vault.views.PasswordEditScreen
 import com.lonley.dev.vault.views.SettingsScreen
 import com.lonley.dev.vault.views.UserProfileScreen
 import com.lonley.dev.vault.views.PasswordGeneratorDialog
-import com.lonley.dev.vault.model.EntryType
-import com.lonley.dev.vault.views.AddPortfolioContent
-import com.lonley.dev.vault.views.DefiScreen
 import com.lonley.dev.vault.views.VaultBottomBar
 import com.lonley.dev.vault.views.RecoveryEntryScreen
 import com.lonley.dev.vault.views.RecoveryPhraseScreen
@@ -230,13 +227,11 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showAddSheet by remember { mutableStateOf(false) }
             var showSettings by remember { mutableStateOf(false) }
             var showProfile by remember { mutableStateOf(false) }
-            var showDefi by remember { mutableStateOf(false) }
             var selectedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             var editingEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             var showChangePassword by remember { mutableStateOf(false) }
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
-            var showAddPortfolioSheet by remember { mutableStateOf(false) }
             val addSheetState = rememberModalBottomSheetState(
                 skipPartiallyExpanded = true
             )
@@ -355,9 +350,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                 showProfile = true
                 viewModel.resetChangePasswordState()
             }
-            BackHandler(enabled = showDefi) {
-                showDefi = false
-            }
             BackHandler(enabled = showProfile) {
                 showProfile = false
             }
@@ -365,7 +357,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                 generatedPasswordForAdd = ""
                 showAddSheet = false
             }
-
             // Snapshot entries so exit animations don't crash on null
             var lastSelectedEntry by remember { mutableStateOf(selectedEntry) }
             var lastEditingEntry by remember { mutableStateOf(editingEntry) }
@@ -381,13 +372,12 @@ fun VaultApp(viewModel: VaultViewModel) {
                 selectedEntry != null -> "detail"
                 showProfile -> "profile"
                 showSettings -> "settings"
-                showDefi -> "defi"
                 else -> "vault"
             }
 
             // Screen depth for determining slide direction
             val screenDepth = mapOf(
-                "vault" to 0, "defi" to 1, "profile" to 1, "settings" to 1, "recovery" to 1,
+                "vault" to 0, "profile" to 1, "settings" to 1, "recovery" to 1,
                 "changePassword" to 2, "detail" to 2, "edit" to 3
             )
 
@@ -570,16 +560,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                             }
                         )
                     }
-                    "defi" -> {
-                        viewModel.resetAutoLockTimer()
-                        DefiScreen(
-                            portfolioEntries = state.entries.filter { it.entryType == EntryType.Portfolio },
-                            onAddClick = {
-                                viewModel.resetAutoLockTimer()
-                                showAddPortfolioSheet = true
-                            }
-                        )
-                    }
                     "settings" -> {
                         viewModel.resetAutoLockTimer()
                         SettingsScreen(
@@ -628,7 +608,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             }
 
             // Fixed FAB — only on vault/settings/profile screens
-            if (screenKey in listOf("vault", "settings", "profile", "defi")) {
+            if (screenKey in listOf("vault", "settings", "profile")) {
                 VaultBottomBar(
                     currentScreen = screenKey,
                     onLockClick = { viewModel.lockVault() },
@@ -636,12 +616,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onProfileClick = {
                         showProfile = true
                         showSettings = false
-                        showDefi = false
-                    },
-                    onDefiClick = {
-                        showDefi = true
-                        showSettings = false
-                        showProfile = false
                     },
                     onGeneratePasswordClick = {
                         viewModel.resetAutoLockTimer()
@@ -650,7 +624,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                     onSettingsClick = {
                         showSettings = true
                         showProfile = false
-                        showDefi = false
                     },
                     onPrimaryAction = {
                         when (screenKey) {
@@ -658,14 +631,9 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 viewModel.resetAutoLockTimer()
                                 showAddSheet = true
                             }
-                            "defi" -> {
-                                viewModel.resetAutoLockTimer()
-                                showAddPortfolioSheet = true
-                            }
                             else -> {
                                 showSettings = false
                                 showProfile = false
-                                showDefi = false
                             }
                         }
                     },
@@ -797,44 +765,6 @@ fun VaultApp(viewModel: VaultViewModel) {
                         initialPassword = generatedPasswordForAdd,
                         onInteraction = { viewModel.resetAutoLockTimer() }
                     )
-                    }
-                }
-            }
-
-            if (showAddPortfolioSheet) {
-                ModalBottomSheet(
-                    onDismissRequest = { showAddPortfolioSheet = false },
-                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-                ) {
-                    Box(modifier = Modifier.fillMaxHeight(0.85f).pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent(PointerEventPass.Initial)
-                                viewModel.resetAutoLockTimer()
-                            }
-                        }
-                    }) {
-                        AddPortfolioContent(
-                            onConfirm = { tokenName, tokenSymbol, tokenAmount, tokenValueUsd, network, l2Network ->
-                                viewModel.resetAutoLockTimer()
-                                viewModel.addPassword(
-                                    name = tokenName,
-                                    username = null,
-                                    password = "",
-                                    website = null,
-                                    entryType = EntryType.Portfolio,
-                                    tokenSymbol = tokenSymbol,
-                                    tokenAmount = tokenAmount,
-                                    tokenValueUsd = tokenValueUsd,
-                                    network = network,
-                                    l2Network = l2Network
-                                )
-                                showAddPortfolioSheet = false
-                            },
-                            onCancel = { showAddPortfolioSheet = false },
-                            hapticsEnabled = settingsState.hapticsEnabled,
-                            onInteraction = { viewModel.resetAutoLockTimer() }
-                        )
                     }
                 }
             }

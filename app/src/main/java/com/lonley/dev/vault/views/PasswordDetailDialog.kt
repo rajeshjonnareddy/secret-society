@@ -383,6 +383,44 @@ fun PasswordDetailScreen(
                                         modifier = Modifier.padding(horizontal = 16.dp)
                                     )
                                 }
+                                if (entry.password.isNotBlank() && entry.password != (entry.seedPhrase ?: "")) {
+                                    var walletPasswordVisible by remember { mutableStateOf(false) }
+                                    DetailFieldRow(
+                                        icon = Icons.Outlined.Lock,
+                                        iconTint = MaterialTheme.colorScheme.primary,
+                                        label = "Password",
+                                        value = if (walletPasswordVisible) entry.password else "\u2022".repeat(entry.password.length.coerceAtMost(16)),
+                                        trailingContent = {
+                                            IconButton(onClick = {
+                                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                                walletPasswordVisible = !walletPasswordVisible
+                                            }) {
+                                                Icon(
+                                                    imageVector = if (walletPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                                    contentDescription = if (walletPasswordVisible) "Hide password" else "Show password",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                            IconButton(onClick = {
+                                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                                onCopyToClipboard(entry.password)
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentCopy,
+                                                    contentDescription = "Copy password",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    )
+                                    HorizontalDivider(
+                                        thickness = 0.5.dp,
+                                        color = dividerColor,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
                                 PassphraseGridSection(
                                     passphrase = entry.seedPhrase ?: entry.password,
                                     visible = passwordVisible,
@@ -712,7 +750,13 @@ fun PasswordEditScreen(
     var name by remember(entry) { mutableStateOf(entry.name) }
     var username by remember(entry) { mutableStateOf(entry.username ?: "") }
     var email by remember(entry) { mutableStateOf(entry.email ?: "") }
-    var password by remember(entry) { mutableStateOf(entry.password) }
+    var password by remember(entry) {
+        // For wallet entries, if password matches the seed phrase it's a legacy entry — treat as no password
+        mutableStateOf(
+            if (entry.entryType == EntryType.CryptoWallet && entry.password == (entry.seedPhrase ?: "")) ""
+            else entry.password
+        )
+    }
     var website by remember(entry) { mutableStateOf(entry.website ?: "") }
     var comments by remember(entry) { mutableStateOf(entry.comments ?: "") }
 
@@ -976,6 +1020,23 @@ fun PasswordEditScreen(
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Outlined.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    PasswordTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = "Password (Optional)",
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -1266,10 +1327,7 @@ fun PasswordEditScreen(
             Button(
                 onClick = {
                     HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
-                    val finalPassword = when (selectedEntryType) {
-                        EntryType.CryptoWallet -> seedPhraseWords.take(selectedSeedWordCount).joinToString(" ") { it.trim() }
-                        else -> password
-                    }
+                    val finalPassword = password
                     onSave(
                         entry.id, name, username, email, finalPassword,
                         website.ifBlank { null }, comments.ifBlank { null },
