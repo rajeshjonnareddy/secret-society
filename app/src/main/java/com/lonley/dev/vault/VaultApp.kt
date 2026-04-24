@@ -559,6 +559,8 @@ fun VaultApp(viewModel: VaultViewModel) {
                             lastExportedAt = lastExportedAt,
                             settingsState = settingsState,
                             hasRecovery = hasRecovery,
+                            vaultName = state.vaultName,
+                            onVaultNameChange = { viewModel.updateVaultName(it) },
                             onSetupRecovery = {
                                 recoveryFromCreation = false
                                 viewModel.generateRecoveryPhrase()

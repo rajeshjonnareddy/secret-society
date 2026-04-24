@@ -856,6 +856,14 @@ class VaultViewModel(
         _recoveryState.value = RecoveryState.None
     }
 
+    fun updateVaultName(newName: String) {
+        val meta = vaultMetadata ?: return
+        meta.put("vaultName", newName)
+        val current = _uiState.value as? VaultUiState.Unlocked ?: return
+        _uiState.value = current.copy(vaultName = newName)
+        saveVaultAsync()
+    }
+
     fun clearJustCreated() {
         val currentState = _uiState.value
         if (currentState is VaultUiState.Unlocked && currentState.justCreated) {

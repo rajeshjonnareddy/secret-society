@@ -44,7 +44,7 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -80,7 +80,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import com.lonley.dev.vault.util.PlainTextClipboardManager
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
@@ -774,7 +773,6 @@ fun PasswordEditScreen(
 ) {
     val hapticView = LocalView.current
     val editContext = LocalContext.current
-    val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
 
     // Set FLAG_SECURE when sensitive fields are revealed to prevent screenshots/screen recording
@@ -1422,30 +1420,31 @@ fun PasswordEditScreen(
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
         )
-        DatePickerDialog(
-            onDismissRequest = {
-                showDatePicker = false
-                focusManager.clearFocus()
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    startDate = datePickerState.selectedDateMillis
-                    showDatePicker = false
-                    focusManager.clearFocus()
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDatePicker = false
-                    focusManager.clearFocus()
-                }) {
-                    Text("Cancel")
+        Dialog(onDismissRequest = { showDatePicker = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp
+            ) {
+                Column {
+                    DatePicker(state = datePickerState)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showDatePicker = false }) {
+                            Text("Cancel")
+                        }
+                        TextButton(onClick = {
+                            startDate = datePickerState.selectedDateMillis
+                            showDatePicker = false
+                        }) {
+                            Text("OK")
+                        }
+                    }
                 }
             }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 

@@ -25,7 +25,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -49,7 +49,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import com.lonley.dev.vault.util.PlainTextClipboardManager
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.material3.Surface
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -107,7 +107,6 @@ fun AddPasswordContent(
     onInteraction: () -> Unit = {}
 ) {
     val view = LocalView.current
-    val focusManager = LocalFocusManager.current
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -689,31 +688,32 @@ fun AddPasswordContent(
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = startDate ?: System.currentTimeMillis()
         )
-        DatePickerDialog(
-            onDismissRequest = {
-                showDatePicker = false
-                focusManager.clearFocus()
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    startDate = datePickerState.selectedDateMillis
-                    showDatePicker = false
-                    focusManager.clearFocus()
-                    onInteraction()
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDatePicker = false
-                    focusManager.clearFocus()
-                }) {
-                    Text("Cancel")
+        Dialog(onDismissRequest = { showDatePicker = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp
+            ) {
+                Column {
+                    DatePicker(state = datePickerState)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showDatePicker = false }) {
+                            Text("Cancel")
+                        }
+                        TextButton(onClick = {
+                            startDate = datePickerState.selectedDateMillis
+                            showDatePicker = false
+                            onInteraction()
+                        }) {
+                            Text("OK")
+                        }
+                    }
                 }
             }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }
