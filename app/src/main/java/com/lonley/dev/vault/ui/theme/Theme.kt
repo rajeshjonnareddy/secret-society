@@ -13,6 +13,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -526,13 +528,19 @@ fun VaultTheme(
 
     val typography = scaledTypography(fontScale)
 
+    val customSelectionColors = TextSelectionColors(
+        handleColor = colorScheme.primary,
+        backgroundColor = colorScheme.primary.copy(alpha = 0.3f)
+    )
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = typography,
     ) {
         CompositionLocalProvider(
             LocalGlassColors provides glassColors,
-            LocalVaultColors provides vaultColors
+            LocalVaultColors provides vaultColors,
+            LocalTextSelectionColors provides customSelectionColors
         ) {
             Box(
                 modifier = Modifier

@@ -44,6 +44,7 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -72,8 +73,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.CompositionLocalProvider
@@ -1426,20 +1425,37 @@ fun PasswordEditScreen(
                 tonalElevation = 6.dp
             ) {
                 Column {
-                    DatePicker(state = datePickerState)
+                    DatePicker(
+                        state = datePickerState,
+                        colors = DatePickerDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(end = 16.dp, bottom = 16.dp),
-                        horizontalArrangement = Arrangement.End
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        TextButton(onClick = { showDatePicker = false }) {
+                        OutlinedButton(
+                            onClick = { showDatePicker = false },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
                             Text("Cancel")
                         }
-                        TextButton(onClick = {
-                            startDate = datePickerState.selectedDateMillis
-                            showDatePicker = false
-                        }) {
+                        Button(
+                            onClick = {
+                                startDate = datePickerState.selectedDateMillis
+                                showDatePicker = false
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
                             Text("OK")
                         }
                     }
@@ -1550,15 +1566,11 @@ private fun PassphraseGridSection(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        val blurRadius by animateDpAsState(
-            targetValue = if (visible) 0.dp else 12.dp,
-            label = "passphrase-blur"
-        )
+        val maskedWord = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 
         val rowCount = (words.size + columns - 1) / columns
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.blur(blurRadius)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             for (row in 0 until rowCount) {
                 Row(
@@ -1585,7 +1597,7 @@ private fun PassphraseGridSection(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = words[index],
+                                        text = if (visible) words[index] else maskedWord,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer

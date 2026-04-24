@@ -80,8 +80,12 @@ fun CreateVaultContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
+    ) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
             text = "Create Vault",
@@ -252,10 +256,13 @@ fun CreateVaultContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    } // end scrollable Column
 
         // Action buttons
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             FilledTonalButton(
@@ -292,9 +299,7 @@ fun CreateVaultContent(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-    }
+    } // end outer Column
 }
 
 @Preview(showBackground = true)

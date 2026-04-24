@@ -32,10 +32,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -151,8 +152,12 @@ fun AddPasswordContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
+    ) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
             text = when {
@@ -612,9 +617,12 @@ fun AddPasswordContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    } // end scrollable Column
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             FilledTonalButton(
@@ -665,9 +673,7 @@ fun AddPasswordContent(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-    }
+    } // end outer Column
     } // CompositionLocalProvider
 
     // Password generator dialog
@@ -694,21 +700,38 @@ fun AddPasswordContent(
                 tonalElevation = 6.dp
             ) {
                 Column {
-                    DatePicker(state = datePickerState)
+                    DatePicker(
+                        state = datePickerState,
+                        colors = DatePickerDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        )
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(end = 16.dp, bottom = 16.dp),
-                        horizontalArrangement = Arrangement.End
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        TextButton(onClick = { showDatePicker = false }) {
+                        OutlinedButton(
+                            onClick = { showDatePicker = false },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
                             Text("Cancel")
                         }
-                        TextButton(onClick = {
-                            startDate = datePickerState.selectedDateMillis
-                            showDatePicker = false
-                            onInteraction()
-                        }) {
+                        Button(
+                            onClick = {
+                                startDate = datePickerState.selectedDateMillis
+                                showDatePicker = false
+                                onInteraction()
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
                             Text("OK")
                         }
                     }
