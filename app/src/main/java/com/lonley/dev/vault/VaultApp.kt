@@ -58,9 +58,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.ChangePasswordState
@@ -246,10 +252,18 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showExportDialog by remember { mutableStateOf(false) }
             val lastExportedAt by viewModel.lastExportedAt.collectAsState()
 
+            val clipScope = rememberCoroutineScope()
+            var clipClearJob by remember { mutableStateOf<Job?>(null) }
             val copyToClipboard: (String) -> Unit = { text ->
                 viewModel.resetAutoLockTimer()
                 clipboardManager.setText(AnnotatedString(text))
-                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Copied · auto-clears in 20s", Toast.LENGTH_SHORT).show()
+                clipClearJob?.cancel()
+                clipClearJob = clipScope.launch {
+                    delay(20_000L)
+                    val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("", ""))
+                }
             }
 
             val launchDownload = {

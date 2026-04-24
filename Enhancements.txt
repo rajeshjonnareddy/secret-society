@@ -1,0 +1,147 @@
+What you actually have (so we're grounded)
+App identity
+
+"Vault" — local-first Android password manager. Slogan rotates Your Data. / Your Device. / Your Rules.
+Brand voice: security-confident, anti-cloud, pragmatic. Not mystical, not playful.
+Visual language: frosted glass cards on an animated gradient background, displayLarge/Bold/primary brand type, 12 accent colors + Auto (dynamic), two-tone system where headings use tertiary and chrome/icons use primary.
+Data surface
+
+PasswordEntry is already richer than most apps ship: isFavorite, isSubscription, planType, price, startDate, reminderEnabled, entryType (Password / CryptoWallet / legacy Passphrase), walletAddress, seedPhrase, network, exchange, comments, createdAt.
+Settings already model: ThemeMode, AccentColor, FontScale, AutoLockTimeout, per-screen scroll haptics, SwipeAction left/right.
+States: Initializing → Locked → PromptUnlock → Loading → Unlocked, + Recovery flow, + ChangePassword flow.
+Screens today HomeScreen (landing / create / open), VaultScreen (list, 67k lines — this is the hot spot), PasswordDetailDialog (72k — also hot), AddPasswordSheet, CreateVaultDrawer, RecoveryPhraseScreen, RecoveryEntryScreen, ChangePasswordScreen, SettingsScreen, UserProfileScreen, PasswordGeneratorDialog.
+
+What the UI currently gets right Glass cards, two-tone accent, marquee brand text, animated slogan, clear "Create / Open" CTA split, per-accent contrasting card headings, haptic-per-screen granularity.
+
+Where it's underbuilt (from reading HomeScreen + the models)
+
+Home is a marketing page, not a vault cockpit after you have vaults.
+No visible "vault health" surface even though you have subscriptions, favorites, renewal dates, strength data.
+Add flow is one giant bottom sheet regardless of entry type.
+Crypto wallet is bolted on; seed phrase UX isn't special.
+No dashboard-level insight into time-sensitive data (renewal in 3 days, weak password, reused, stale).
+UX reimaginations — big moves
+1. Split "Home" into First-run Home vs. Cockpit Home
+Right now HomeScreen is a welcome page. Keep it for first run. After a vault exists, land on a Cockpit that greets you before unlock and shows non-sensitive summary:
+
+"Last unlocked 2h ago · 47 entries · 3 subs renewing this week"
+Subscription countdown chips (e.g. Netflix renews Fri) — no password data shown
+A prominent Unlock button (biometric primary, master-password secondary)
+Swappable: if user prefers, tap-to-unlock immediately
+This turns the app into something useful even when locked.
+
+2. Health Pulse on the Vault screen
+A single top card that scores the vault (0–100), decomposed into four glass chips:
+
+Weak (n entries), Reused (n), Stale (>1 yr), Renewing soon (subs). Tapping any chip filters the list. This is the single biggest UX win — it turns a "bucket of passwords" into a "thing that tells you what to do."
+3. Entry-type-aware Add flow
+Instead of one 30k-line sheet, a two-step:
+
+Step 1: choose type — Password / Wallet / Subscription (extract subscription as a first-class type, since it has its own fields already)
+Step 2: only the fields that matter for that type
+Saves scroll, validation, and your file size.
+
+4. Smart seed-phrase entry
+For wallets, don't use a plain grid:
+
+Word chips with BIP-39 auto-complete (Bip39Wordlist.kt is already in the repo — wire it up)
+Paste 12/24 words detected automatically
+Blur-on-blur — words un-focus become ••••, tap to reveal one, long-press to copy one
+Countdown reveal (Reveal for 15s) — never leaves clipboard after
+5. Subscriptions view (new tab or filter)
+Since PlanType + startDate + price + nextRenewalDate() is already in code, promote it:
+
+Horizontal timeline of upcoming renewals
+Totals: "You spend $42.97/mo across 6 subscriptions"
+Per-entry: "Next: May 14 · 26 days"
+6. Unlock screen that respects the user's choice of trust
+Today: master password. Add:
+
+Biometric unlock (opt-in, with clear "still requires master after reboot / every 24h" copy)
+Panic tap (5× on logo) → fake empty vault (Duress mode)
+Per-entry re-auth option: a flagged entry (seed phrases, private keys) requires re-biometric to reveal even within an unlocked session
+7. Detail screen redesign (the 72k one)
+Collapse it to three zones:
+
+Identity zone (name, monogram, type badge, favorite star)
+Copyable fields (username, password, URL — each with single-tap copy + "auto-clear in 20s" toast)
+Meta (created, last-used, notes) — collapsed by default
+Plus: history sparkline — show when the password was last rotated, visually. ("Last changed 9 months ago.")
+
+8. Swipe actions — use what you modeled but never shipped
+Your settings already have swipeLeftAction / swipeRightAction. Ship them on list rows with spring animation, icon preview under the row, and haptic tick on threshold. This is one of the biggest feels-fast wins in a list app.
+
+Small tweaks — the kind that compound
+Motion & feedback
+Spring-based reveals on password field (mask fades with a dampingRatio = MediumBouncy, not a linear tween)
+Haptic ladder: Tick on list scroll, light on copy, medium on save, heavy on delete confirm. You already have HapticHelper — just wire a ladder
+Shared-element transition from list row → detail (monogram + name morph)
+Copy feedback = ripple from tap point + toast "Password copied · clears in 20s · [Keep]"
+Color & glass
+Glass card hover/press state — currently static. Add a 6% tertiary wash on press with spring-scale 0.98
+Heading color currently = tertiary — good. Extend with a subtle accent underline 2dp under entry name, 24dp wide, for entries whose strength = Strong (a visual badge with no icon cost)
+Weak password rows get a 1dp left-edge glow in StrengthWeak — a peripheral-vision cue, no extra chrome
+Density & rhythm
+Three list densities (Compact / Comfortable / Spacious) tied to FontScale already in Settings
+Sticky alphabet rail on the right edge for >30 entries — drag to jump, Indian-style fast scroll
+Group by toggle (Type / Favorites / Recent / Alphabetical) in the top bar
+Empty states that teach
+First vault, empty list → three example cards that animate in and say "Tap + to store your first password" — swipe them away to dismiss
+Filter yields zero → "No weak passwords. Nice." (not "No results")
+Time-aware surfaces
+Last-used pill on each row ("2d", "3w", "never") in onSurfaceVariant — helps users prune
+Auto-age badge — entries >365 days old get a tiny clock glyph in the heading
+Subscription ring — on subscription rows, a thin circular progress ring around the monogram showing % of cycle elapsed
+Security micro-touches
+Screen recording guard — activate FLAG_SECURE whenever a reveal is active, clear when hidden
+Clipboard auto-clear countdown, visible as a shrinking bar at the bottom after a copy
+"Show-once" fields — seed phrases default to never-rendered unless tapped; render word-by-word, not all at once
+Re-lock on orientation change if user sets a strict mode
+Search that doesn't suck
+Scoped search chips (Name, URL, Email, Notes) — because searching notes is the only way to find that one entry you tagged
+Recent searches (local, of course) surface as chips under the search bar
+Fuzzy match on site names (so gthb → github) — cheap, one library
+Generator upgrades
+Pronounceable mode (correct-horse-battery-staple style — xkcd passphrase), PIN mode, Passphrase mode — toggles live in the sheet
+Strength live-graphs — Shannon-entropy bits, color-graded, with a "time to crack" approximation text beneath
+Rejection rules: "Must include symbol" as chip toggles, not a hamburger of checkboxes
+Recovery UX (your crypto layer is serious)
+Recovery-phrase screen should make the user type back 3 random words before continuing ("word 7", "word 14", "word 21") — this is a nudge, not a nanny
+After that, show a one-time "I wrote it down" checkbox with a 5-second disable — prevents muscle-memory tapping
+Power-user features
+Command palette (long-press FAB) — keyboard-style quick actions: "Copy Gmail password", "New wallet", "Lock vault"
+Export as… — encrypted backup, 1Password .1pif, CSV (with warning)
+Duplicate detection — find entries with identical passwords; offer one-tap rotate
+Import from — Chrome CSV, Firefox Lockwise, Bitwarden JSON
+Settings polish
+Per-screen haptics is cool; reorganize as an "Feel" group (haptics, animations-on/off for reduced-motion users, sound)
+Theme → live preview card inside the setting, not a separate screen trip
+AutoLockTimeout → show a "secure score" that updates as the user adjusts (1 min = great, Never = red)
+Accessibility (often a big UX upside at low cost)
+FontScale already exists — make sure the status bar icons & list rows scale with it (currently headings are intentionally unscaled; confirm whether that's OK for low-vision users)
+High-contrast mode — flips glass cards to solid surface with stronger borders
+Screen reader password announcement — by default, announce "password copied" not "•••••••• copied" (privacy)
+Data-centric features worth adding
+Breach check (offline) — bundle a hash prefix list (haveibeenpwned k-anonymity model) and let users check without leaving device
+Password age heatmap — small calendar-style grid on the Profile screen, one cell per month, shaded by rotation frequency
+Linked entries — mark two entries as linked (e.g. "work Google" + "work YubiKey"); shown on detail as related
+Folders / collections — you have categories in plan.md but not in model; add as optional tag
+Per-entry notes attachments — markdown notes field, rendered with links & code blocks. Even local-only docs are useful
+TOTP storage — ambitious but logical: a vault app that holds your 2FA codes too. Keystore-backed HOTP/TOTP generator with 30s ring
+Activity log (local only): "Edited Gmail 2d ago · Copied password from Netflix 3× this week" — gives users a feel of ownership
+Multi-vault — e.g. Personal and Work. Your vaultName field suggests this is already envisioned; surface it as a vault-switcher in the app bar
+My recommended build order (if you want a roadmap)
+Health pulse card on Vault screen — biggest perceived-quality jump, cheap
+Swipe actions on rows — ship what's already in SettingsState
+Entry-type-aware Add flow — breaks down the 30k sheet
+Biometric unlock + cockpit pre-unlock screen — daily-use win
+Subscriptions view — your data model is already paying for this
+Generator modes + strength graph — small, delightful
+Clipboard countdown + FLAG_SECURE on reveal — trust signal
+Duplicate/reused detector — shippable in ~200 lines with your existing entries StateFlow
+Want me to mock any of these up? The most valuable ones visually are probably:
+
+Cockpit Home (pre-unlock)
+Vault screen with Health Pulse + swipe actions
+New detail screen with clipboard countdown + age sparkline
+Entry-type-aware Add sheet (Password / Wallet / Subscription split)

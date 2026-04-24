@@ -54,6 +54,12 @@ import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -207,10 +213,16 @@ private fun PasswordEntryItem(
     onFavoriteClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {}
 ) {
-    val relativeTime = remember(entry.createdAt) { formatRelativeTime(entry.createdAt, justNowText = "now") }
-
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "cardScale"
+    )
 
     val cardGradient = Brush.linearGradient(
         colors = listOf(
@@ -233,7 +245,13 @@ private fun PasswordEntryItem(
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongPress
             )
@@ -244,12 +262,30 @@ private fun PasswordEntryItem(
                         .fillMaxSize()
                         .background(cardGradient)
                         .background(shineGradient)
+                        .then(
+                            if (isPressed) Modifier.background(tertiaryColor.copy(alpha = 0.06f))
+                            else Modifier
+                        )
                 )
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(IntrinsicSize.Min)
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Strength indicator — thin left-edge bar
+                    val strength = remember(entry.password) { calculatePasswordStrength(entry.password) }
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .fillMaxHeight()
+                            .background(strength.color.copy(alpha = 0.8f))
+                    )
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -370,11 +406,35 @@ private fun PasswordEntryItem(
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            Text(
-                                text = relativeTime,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
+                            // Password age pill
+                            val ageDays = remember(entry.createdAt) {
+                                ((System.currentTimeMillis() - entry.createdAt) / 86_400_000L).toInt()
+                            }
+                            val ageText = remember(ageDays) {
+                                when {
+                                    ageDays < 1 -> "new"
+                                    ageDays < 30 -> "${ageDays}d ago"
+                                    ageDays < 365 -> "${ageDays / 30}mo ago"
+                                    else -> "${ageDays / 365}yr ago"
+                                }
+                            }
+                            val isStale = ageDays > 365
+                            val ageColor = if (isStale) com.lonley.dev.vault.ui.theme.StrengthWeak
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(ageColor.copy(alpha = 0.10f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = ageText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isStale) FontWeight.Bold else FontWeight.Medium,
+                                    color = ageColor.copy(alpha = 0.8f)
+                                )
+                            }
+
                         }
                         } // end bottom-pinned Column
                     }
@@ -420,7 +480,8 @@ private fun PasswordEntryItem(
                             )
                         }
                     }
-                }
+                } // end inner Row (padded content)
+                } // end outer Row (strength bar + content)
     }
 }
 
@@ -558,44 +619,29 @@ private fun swipeActionVisuals(action: SwipeAction): SwipeActionVisuals = when (
 @Composable
 private fun SwipeBackground(
     action: SwipeAction,
-    direction: SwipeToDismissBoxValue,
-    progress: Float
+    direction: SwipeToDismissBoxValue
 ) {
     val visuals = swipeActionVisuals(action)
-    val parentAlignment = when (direction) {
+    val contentAlignment = when (direction) {
         SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
         SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
         else -> return
     }
 
-    // Clamp progress so the background only covers the revealed portion
-    val fraction = progress.coerceIn(0f, 1f)
-    if (fraction == 0f) return
-
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = parentAlignment
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
+            .background(visuals.color)
+            .padding(horizontal = 24.dp),
+        contentAlignment = contentAlignment
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(fraction)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(16.dp))
-                .background(visuals.color)
-                .padding(horizontal = 24.dp),
-            contentAlignment = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                else -> Alignment.Center
-            }
-        ) {
-            Icon(
-                imageVector = visuals.icon,
-                contentDescription = visuals.description,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
+        Icon(
+            imageVector = visuals.icon,
+            contentDescription = visuals.description,
+            tint = Color.White,
+            modifier = Modifier.size(28.dp)
+        )
     }
 }
 
@@ -632,24 +678,10 @@ private fun SwipeablePasswordCard(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            val rawProgress = dismissState.progress
-            val current = dismissState.currentValue
-            val target = dismissState.targetValue
-            val isSettled = current == SwipeToDismissBoxValue.Settled &&
-                    target == SwipeToDismissBoxValue.Settled
-            val isSnappingBack = current != SwipeToDismissBoxValue.Settled &&
-                    target == SwipeToDismissBoxValue.Settled
-
-            val fraction = when {
-                isSettled -> 0f
-                isSnappingBack -> (1f - rawProgress).coerceIn(0f, 1f)
-                else -> rawProgress.coerceIn(0f, 1f)
-            }
-
             when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> SwipeBackground(swipeRightAction, SwipeToDismissBoxValue.StartToEnd, fraction)
-                SwipeToDismissBoxValue.EndToStart -> SwipeBackground(swipeLeftAction, SwipeToDismissBoxValue.EndToStart, fraction)
-                else -> Box(Modifier.fillMaxSize())
+                SwipeToDismissBoxValue.StartToEnd -> SwipeBackground(swipeRightAction, SwipeToDismissBoxValue.StartToEnd)
+                SwipeToDismissBoxValue.EndToStart -> SwipeBackground(swipeLeftAction, SwipeToDismissBoxValue.EndToStart)
+                else -> {}
             }
         }
     ) {
@@ -736,7 +768,9 @@ fun VaultScreen(
                 (entry.username?.contains(searchQuery, ignoreCase = true) == true) ||
                 (entry.email?.contains(searchQuery, ignoreCase = true) == true) ||
                 (entry.walletAddress?.contains(searchQuery, ignoreCase = true) == true) ||
-                (entry.exchange?.contains(searchQuery, ignoreCase = true) == true)
+                (entry.exchange?.contains(searchQuery, ignoreCase = true) == true) ||
+                (entry.comments?.contains(searchQuery, ignoreCase = true) == true) ||
+                (entry.website?.contains(searchQuery, ignoreCase = true) == true)
         val matchesFilter = selectedFilter == "All" || when (selectedFilter) {
             "Favorites" -> entry.isFavorite
             "Subscriptions" -> entry.isSubscription
@@ -745,7 +779,7 @@ fun VaultScreen(
             else -> true
         }
         matchesSearch && matchesFilter
-    }.sortedBy { it.name.lowercase() }
+    }.sortedWith(compareByDescending<PasswordEntry> { it.isFavorite }.thenBy { it.name.lowercase() })
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -1082,6 +1116,14 @@ fun VaultScreen(
                     }
                 }
             } else if (filteredEntries.isEmpty()) {
+                val emptyMessage = when {
+                    searchQuery.isNotBlank() -> "No results for \"$searchQuery\""
+                    selectedFilter == "Favorites" -> "No favorites yet — star an entry to pin it here"
+                    selectedFilter == "Subscriptions" -> "No subscriptions tracked yet"
+                    selectedFilter == "Wallets" -> "No wallets stored yet"
+                    selectedFilter == "Websites" -> "No entries with website URLs"
+                    else -> "No matches found"
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -1089,7 +1131,7 @@ fun VaultScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No matches found",
+                        text = emptyMessage,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

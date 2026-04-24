@@ -3,6 +3,7 @@ package com.lonley.dev.vault.views
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,21 +59,27 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalClipboardManager
+import com.lonley.dev.vault.util.PlainTextClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -156,7 +163,21 @@ fun PasswordDetailScreen(
     onToggleReminder: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
+    val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Set FLAG_SECURE when sensitive fields are revealed to prevent screenshots/screen recording
+    DisposableEffect(passwordVisible) {
+        val window = (context as? Activity)?.window
+        if (passwordVisible) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
     var walletAddressVisible by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -752,9 +773,22 @@ fun PasswordEditScreen(
     onToggleFavorite: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
+    val editContext = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val dateFocusRequester = remember { FocusRequester() }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Set FLAG_SECURE when sensitive fields are revealed to prevent screenshots/screen recording
+    DisposableEffect(passwordVisible) {
+        val window = (editContext as? Activity)?.window
+        if (passwordVisible) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
 
     var name by remember(entry) { mutableStateOf(entry.name) }
     var username by remember(entry) { mutableStateOf(entry.username ?: "") }
@@ -817,6 +851,10 @@ fun PasswordEditScreen(
     }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
+    val systemClipboard = LocalClipboardManager.current
+    val plainClipboard = remember(systemClipboard) { PlainTextClipboardManager(systemClipboard) }
+
+    CompositionLocalProvider(LocalClipboardManager provides plainClipboard) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1255,25 +1293,34 @@ fun PasswordEditScreen(
                     // Start date
                     val dateText = if (startDate != null) formatTimestamp(startDate!!) else "Select Start Date"
 
-                    OutlinedTextField(
-                        value = dateText,
-                        onValueChange = {},
-                        label = { Text("Start Date") },
-                        readOnly = true,
-                        singleLine = true,
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.CalendarToday,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(dateFocusRequester)
-                            .onFocusChanged { if (it.isFocused) showDatePicker = true },
-                        shape = fieldShape
-                    )
+                            .clickable { showDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = dateText,
+                            onValueChange = {},
+                            label = { Text("Start Date") },
+                            enabled = false,
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.CalendarToday,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLeadingIconColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = fieldShape
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -1368,6 +1415,7 @@ fun PasswordEditScreen(
             }
         }
     }
+    } // CompositionLocalProvider
 
     // Date picker dialog
     if (showDatePicker) {

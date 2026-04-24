@@ -44,9 +44,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalClipboardManager
+import com.lonley.dev.vault.util.PlainTextClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextRange
@@ -59,6 +61,20 @@ import com.lonley.dev.vault.model.EntryType
 import com.lonley.dev.vault.model.Network
 import com.lonley.dev.vault.model.PlanType
 import com.lonley.dev.vault.ui.theme.VaultTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.window.Popup
+import com.lonley.dev.vault.crypto.Bip39Wordlist
 import com.lonley.dev.vault.util.HapticHelper
 import com.lonley.dev.vault.util.formatTimestamp
 
@@ -92,7 +108,6 @@ fun AddPasswordContent(
 ) {
     val view = LocalView.current
     val focusManager = LocalFocusManager.current
-    val dateFocusRequester = remember { FocusRequester() }
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -130,6 +145,10 @@ fun AddPasswordContent(
     }
     val fieldShape = MaterialTheme.shapes.extraLarge
 
+    val systemClipboard = LocalClipboardManager.current
+    val plainClipboard = remember(systemClipboard) { PlainTextClipboardManager(systemClipboard) }
+
+    CompositionLocalProvider(LocalClipboardManager provides plainClipboard) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -170,10 +189,11 @@ fun AddPasswordContent(
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
-                selected = selectedEntryType == EntryType.Password,
+                selected = selectedEntryType == EntryType.Password && !isSubscription,
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     selectedEntryType = EntryType.Password
+                    isSubscription = false
                     onInteraction()
                 },
                 label = { Text("Password") }
@@ -183,9 +203,20 @@ fun AddPasswordContent(
                 onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     selectedEntryType = EntryType.CryptoWallet
+                    isSubscription = false
                     onInteraction()
                 },
                 label = { Text("Digital Wallet") }
+            )
+            FilterChip(
+                selected = isSubscription && selectedEntryType == EntryType.Password,
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    selectedEntryType = EntryType.Password
+                    isSubscription = true
+                    onInteraction()
+                },
+                label = { Text("Subscription") }
             )
         }
 
@@ -434,38 +465,7 @@ fun AddPasswordContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Subscription toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Subscriptions,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Subscription",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Switch(
-                checked = isSubscription,
-                onCheckedChange = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    isSubscription = it
-                    onInteraction()
-                }
-            )
-        }
-
+        // Subscription fields
         AnimatedVisibility(visible = isSubscription) {
             Column {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -547,25 +547,34 @@ fun AddPasswordContent(
                 // Start date button
                 val dateText = if (startDate != null) formatTimestamp(startDate!!) else "Select Start Date"
 
-                OutlinedTextField(
-                    value = dateText,
-                    onValueChange = {},
-                    label = { Text("Start Date") },
-                    readOnly = true,
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusRequester(dateFocusRequester)
-                        .onFocusChanged { if (it.isFocused) showDatePicker = true },
-                    shape = fieldShape
-                )
+                        .clickable { showDatePicker = true }
+                ) {
+                    OutlinedTextField(
+                        value = dateText,
+                        onValueChange = {},
+                        label = { Text("Start Date") },
+                        enabled = false,
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledLeadingIconColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = fieldShape
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -660,6 +669,7 @@ fun AddPasswordContent(
 
         Spacer(modifier = Modifier.height(32.dp))
     }
+    } // CompositionLocalProvider
 
     // Password generator dialog
     if (showGeneratorDialog) {
@@ -725,28 +735,90 @@ fun PassphraseWordFields(
             ) {
                 for (col in 0 until columns) {
                     val index = row * columns + col
-                    OutlinedTextField(
+                    Bip39WordField(
                         value = words[index],
-                        onValueChange = { value ->
-                            val pastedWords = value.trim().split("\\s+".toRegex())
-                            if (pastedWords.size > 1) {
-                                // Pasted a multi-word phrase — distribute across fields
-                                pastedWords.forEachIndexed { offset, word ->
-                                    val targetIndex = index + offset
-                                    if (targetIndex < wordCount) {
-                                        onWordChange(targetIndex, word)
-                                    }
-                                }
-                            } else {
-                                onWordChange(index, value.filter { !it.isWhitespace() })
-                            }
-                        },
-                        label = { Text("${index + 1}.") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        shape = fieldShape,
-                        textStyle = MaterialTheme.typography.bodySmall
+                        index = index,
+                        wordCount = wordCount,
+                        onWordChange = onWordChange,
+                        fieldShape = fieldShape,
+                        modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Bip39WordField(
+    value: String,
+    index: Int,
+    wordCount: Int,
+    onWordChange: (index: Int, value: String) -> Unit,
+    fieldShape: androidx.compose.ui.graphics.Shape,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    var fieldSize by remember { mutableStateOf(IntSize.Zero) }
+    var hasFocus by remember { mutableStateOf(false) }
+
+    val suggestions = remember(value, hasFocus) {
+        if (hasFocus && value.length >= 2) {
+            Bip39Wordlist.words.filter { it.startsWith(value.lowercase()) }.take(4)
+        } else emptyList()
+    }
+
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { newValue ->
+                val pastedWords = newValue.trim().split("\\s+".toRegex())
+                if (pastedWords.size > 1) {
+                    pastedWords.forEachIndexed { offset, word ->
+                        val targetIndex = index + offset
+                        if (targetIndex < wordCount) {
+                            onWordChange(targetIndex, word)
+                        }
+                    }
+                } else {
+                    onWordChange(index, newValue.filter { !it.isWhitespace() })
+                }
+            },
+            label = { Text("${index + 1}.") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { hasFocus = it.isFocused }
+                .onGloballyPositioned { fieldSize = it.size },
+            shape = fieldShape,
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        if (suggestions.isNotEmpty() && value !in suggestions) {
+            Popup {
+                val widthDp = with(density) { fieldSize.width.toDp() }
+                val topOffset = with(density) { fieldSize.height.toDp() }
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(top = topOffset)
+                        .width(widthDp)
+                        .heightIn(max = 160.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    items(suggestions) { word ->
+                        Text(
+                            text = word,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onWordChange(index, word)
+                                    hasFocus = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        )
+                    }
                 }
             }
         }

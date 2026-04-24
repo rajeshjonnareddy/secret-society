@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.FilterChip
+import com.lonley.dev.vault.crypto.Bip39Wordlist
 import com.lonley.dev.vault.util.HapticHelper
 import java.security.SecureRandom
 
@@ -53,11 +55,22 @@ fun PasswordGeneratorDialog(
     val view = LocalView.current
     val clipboardManager = LocalClipboardManager.current
 
+    var selectedMode by remember { mutableStateOf("Random") }
+
+    // Random mode options
     var includeUppercase by remember { mutableStateOf(true) }
     var includeLowercase by remember { mutableStateOf(true) }
     var includeNumbers by remember { mutableStateOf(true) }
     var includeSpecial by remember { mutableStateOf(false) }
     var length by remember { mutableFloatStateOf(16f) }
+
+    // Passphrase mode options
+    var passphraseWordCount by remember { mutableStateOf(12) }
+    var separator by remember { mutableStateOf("-") }
+
+    // PIN mode options
+    var pinLength by remember { mutableFloatStateOf(6f) }
+
     var generatedPassword by remember { mutableStateOf("") }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -78,80 +91,175 @@ fun PasswordGeneratorDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Toggle rows
-                ToggleRow(
-                    label = "Uppercase (A-Z)",
-                    checked = includeUppercase,
-                    onCheckedChange = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        includeUppercase = it
-                        onInteraction()
+                // Mode selector
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    listOf("Random", "Passphrase", "PIN").forEach { mode ->
+                        FilterChip(
+                            selected = selectedMode == mode,
+                            onClick = {
+                                HapticHelper.performClick(view, hapticsEnabled)
+                                selectedMode = mode
+                                generatedPassword = ""
+                                onInteraction()
+                            },
+                            label = { Text(mode) }
+                        )
                     }
-                )
-                ToggleRow(
-                    label = "Lowercase (a-z)",
-                    checked = includeLowercase,
-                    onCheckedChange = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        includeLowercase = it
-                        onInteraction()
-                    }
-                )
-                ToggleRow(
-                    label = "Numbers (0-9)",
-                    checked = includeNumbers,
-                    onCheckedChange = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        includeNumbers = it
-                        onInteraction()
-                    }
-                )
-                ToggleRow(
-                    label = "Special (!@#\$%...)",
-                    checked = includeSpecial,
-                    onCheckedChange = {
-                        HapticHelper.performClick(view, hapticsEnabled)
-                        includeSpecial = it
-                        onInteraction()
-                    }
-                )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Length slider
-                Text(
-                    text = "Length: ${length.toInt()}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Slider(
-                    value = length,
-                    onValueChange = { length = it; onInteraction() },
-                    valueRange = 8f..64f,
-                    steps = 55,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                when (selectedMode) {
+                    "Random" -> {
+                        // Toggle rows
+                        ToggleRow(
+                            label = "Uppercase (A-Z)",
+                            checked = includeUppercase,
+                            onCheckedChange = {
+                                HapticHelper.performClick(view, hapticsEnabled)
+                                includeUppercase = it
+                                onInteraction()
+                            }
+                        )
+                        ToggleRow(
+                            label = "Lowercase (a-z)",
+                            checked = includeLowercase,
+                            onCheckedChange = {
+                                HapticHelper.performClick(view, hapticsEnabled)
+                                includeLowercase = it
+                                onInteraction()
+                            }
+                        )
+                        ToggleRow(
+                            label = "Numbers (0-9)",
+                            checked = includeNumbers,
+                            onCheckedChange = {
+                                HapticHelper.performClick(view, hapticsEnabled)
+                                includeNumbers = it
+                                onInteraction()
+                            }
+                        )
+                        ToggleRow(
+                            label = "Special (!@#\$%...)",
+                            checked = includeSpecial,
+                            onCheckedChange = {
+                                HapticHelper.performClick(view, hapticsEnabled)
+                                includeSpecial = it
+                                onInteraction()
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Length: ${length.toInt()}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Slider(
+                            value = length,
+                            onValueChange = { length = it; onInteraction() },
+                            valueRange = 8f..64f,
+                            steps = 55,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    "Passphrase" -> {
+                        Text(
+                            text = "Word Count",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = passphraseWordCount == 12,
+                                onClick = {
+                                    HapticHelper.performClick(view, hapticsEnabled)
+                                    passphraseWordCount = 12
+                                    onInteraction()
+                                },
+                                label = { Text("12 Words") }
+                            )
+                            FilterChip(
+                                selected = passphraseWordCount == 24,
+                                onClick = {
+                                    HapticHelper.performClick(view, hapticsEnabled)
+                                    passphraseWordCount = 24
+                                    onInteraction()
+                                },
+                                label = { Text("24 Words") }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Separator",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("-", ".", "_", " ").forEach { sep ->
+                                FilterChip(
+                                    selected = separator == sep,
+                                    onClick = {
+                                        HapticHelper.performClick(view, hapticsEnabled)
+                                        separator = sep
+                                        onInteraction()
+                                    },
+                                    label = { Text(if (sep == " ") "space" else sep) }
+                                )
+                            }
+                        }
+                    }
+                    "PIN" -> {
+                        Text(
+                            text = "Length: ${pinLength.toInt()}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Slider(
+                            value = pinLength,
+                            onValueChange = { pinLength = it; onInteraction() },
+                            valueRange = 4f..8f,
+                            steps = 3,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Generate button
-                val hasAnyOption = includeUppercase || includeLowercase || includeNumbers || includeSpecial
+                val canGenerate = when (selectedMode) {
+                    "Random" -> includeUppercase || includeLowercase || includeNumbers || includeSpecial
+                    else -> true
+                }
                 Button(
                     onClick = {
                         HapticHelper.performClick(view, hapticsEnabled)
                         onInteraction()
-                        generatedPassword = generatePassword(
-                            length = length.toInt(),
-                            upper = includeUppercase,
-                            lower = includeLowercase,
-                            numbers = includeNumbers,
-                            special = includeSpecial
-                        )
+                        generatedPassword = when (selectedMode) {
+                            "Passphrase" -> generatePassphrase(passphraseWordCount, separator)
+                            "PIN" -> generatePin(pinLength.toInt())
+                            else -> generatePassword(
+                                length = length.toInt(),
+                                upper = includeUppercase,
+                                lower = includeLowercase,
+                                numbers = includeNumbers,
+                                special = includeSpecial
+                            )
+                        }
                     },
-                    enabled = hasAnyOption,
+                    enabled = canGenerate,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -285,4 +393,19 @@ private fun generatePassword(
         .map { pool[random.nextInt(pool.length)] }
         .toCharArray()
         .let { String(it) }
+}
+
+private fun generatePassphrase(wordCount: Int, separator: String): String {
+    val random = SecureRandom()
+    val words = Bip39Wordlist.words
+    return (1..wordCount)
+        .map { words[random.nextInt(words.size)] }
+        .joinToString(separator)
+}
+
+private fun generatePin(length: Int): String {
+    val random = SecureRandom()
+    return (1..length)
+        .map { random.nextInt(10) }
+        .joinToString("")
 }
