@@ -31,4 +31,17 @@ object HapticHelper {
             )
         }
     }
+
+    fun performReject(view: View, enabled: Boolean) {
+        if (enabled) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                view.performHapticFeedback(HapticFeedbackConstants.REJECT)
+            } else {
+                view.performHapticFeedback(
+                    HapticFeedbackConstants.LONG_PRESS,
+                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                )
+            }
+        }
+    }
 }

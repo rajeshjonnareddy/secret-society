@@ -479,6 +479,7 @@ class VaultViewModel(
         email: String? = null,
         isFavorite: Boolean = false,
         isSubscription: Boolean = false,
+        subscriptionActive: Boolean = true,
         planType: PlanType? = null,
         price: String? = null,
         subscriptionEmail: String? = null,
@@ -501,6 +502,7 @@ class VaultViewModel(
             comments = comments,
             isFavorite = isFavorite,
             isSubscription = isSubscription,
+            subscriptionActive = subscriptionActive,
             planType = planType,
             price = price,
             subscriptionEmail = subscriptionEmail,
@@ -536,6 +538,7 @@ class VaultViewModel(
         email: String? = null,
         isFavorite: Boolean = false,
         isSubscription: Boolean = false,
+        subscriptionActive: Boolean = true,
         planType: PlanType? = null,
         price: String? = null,
         subscriptionEmail: String? = null,
@@ -560,6 +563,7 @@ class VaultViewModel(
             comments = comments,
             isFavorite = isFavorite,
             isSubscription = isSubscription,
+            subscriptionActive = subscriptionActive,
             planType = planType,
             price = price,
             subscriptionEmail = subscriptionEmail,
@@ -604,6 +608,18 @@ class VaultViewModel(
         }
         saveVaultAsync()
         syncReminders()
+    }
+
+    fun toggleSubscriptionActive(id: String) {
+        val index = entries.indexOfFirst { it.id == id }
+        if (index == -1) return
+        entries[index] = entries[index].copy(subscriptionActive = !entries[index].subscriptionActive)
+        lastUpdatedAt = System.currentTimeMillis()
+        val currentState = _uiState.value
+        if (currentState is VaultUiState.Unlocked) {
+            _uiState.value = currentState.copy(entries = entries.toList(), lastUpdatedAt = lastUpdatedAt)
+        }
+        saveVaultAsync()
     }
 
     private fun syncReminders() {

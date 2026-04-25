@@ -75,6 +75,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -158,7 +160,8 @@ fun PasswordDetailScreen(
     onDelete: (id: String) -> Unit,
     onCopyToClipboard: (String) -> Unit,
     onToggleFavorite: () -> Unit = {},
-    onToggleReminder: () -> Unit = {}
+    onToggleReminder: () -> Unit = {},
+    onToggleSubscriptionActive: () -> Unit = {}
 ) {
     val hapticView = LocalView.current
     val context = LocalContext.current
@@ -629,6 +632,61 @@ fun PasswordDetailScreen(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
+                                        .background(
+                                            (if (entry.subscriptionActive) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error).copy(alpha = 0.12f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Subscriptions,
+                                        contentDescription = null,
+                                        tint = if (entry.subscriptionActive) MaterialTheme.colorScheme.primary
+                                               else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Status",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (entry.subscriptionActive) "Active" else "Inactive",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (entry.subscriptionActive) MaterialTheme.colorScheme.primary
+                                               else MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                Switch(
+                                    checked = entry.subscriptionActive,
+                                    onCheckedChange = {
+                                        HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                        onToggleSubscriptionActive()
+                                    }
+                                )
+                            }
+
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = dividerColor,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -761,7 +819,7 @@ fun PasswordEditScreen(
     onSave: (
         id: String, name: String, username: String, email: String, password: String,
         website: String?, comments: String?,
-        isFavorite: Boolean, isSubscription: Boolean, planType: PlanType?,
+        isFavorite: Boolean, isSubscription: Boolean, subscriptionActive: Boolean, planType: PlanType?,
         price: String?, subscriptionEmail: String?, startDate: Long?,
         reminderEnabled: Boolean,
         entryType: EntryType, phraseWordCount: Int?,
@@ -825,6 +883,7 @@ fun PasswordEditScreen(
     // Subscription fields
     var isFavorite by remember(entry) { mutableStateOf(entry.isFavorite) }
     var isSubscription by remember(entry) { mutableStateOf(entry.isSubscription) }
+    var subscriptionActive by remember(entry) { mutableStateOf(entry.subscriptionActive) }
     var selectedPlanType by remember(entry) { mutableStateOf(entry.planType) }
     var price by remember(entry) {
         val raw = entry.price ?: ""
@@ -851,7 +910,14 @@ fun PasswordEditScreen(
     val systemClipboard = LocalClipboardManager.current
     val plainClipboard = remember(systemClipboard) { PlainTextClipboardManager(systemClipboard) }
 
-    CompositionLocalProvider(LocalClipboardManager provides plainClipboard) {
+    val customSelectionColors = TextSelectionColors(
+        handleColor = MaterialTheme.colorScheme.primary,
+        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    )
+    CompositionLocalProvider(
+        LocalClipboardManager provides plainClipboard,
+        LocalTextSelectionColors provides customSelectionColors
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1321,6 +1387,40 @@ fun PasswordEditScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Active/Inactive toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Subscriptions,
+                                contentDescription = null,
+                                tint = if (subscriptionActive) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = if (subscriptionActive) "Active" else "Inactive",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Switch(
+                            checked = subscriptionActive,
+                            onCheckedChange = {
+                                HapticHelper.performClick(hapticView, settingsState.hapticsEnabled)
+                                subscriptionActive = it
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     // Reminder toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1387,7 +1487,7 @@ fun PasswordEditScreen(
                     onSave(
                         entry.id, name, username, email, finalPassword,
                         website.ifBlank { null }, comments.ifBlank { null },
-                        isFavorite, isSubscription, selectedPlanType,
+                        isFavorite, isSubscription, subscriptionActive, selectedPlanType,
                         price.ifBlank { null }, subscriptionEmail.ifBlank { null },
                         startDate, reminderEnabled,
                         selectedEntryType,
@@ -1434,7 +1534,7 @@ fun PasswordEditScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(

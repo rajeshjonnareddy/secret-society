@@ -46,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -148,7 +150,14 @@ fun AddPasswordContent(
     val systemClipboard = LocalClipboardManager.current
     val plainClipboard = remember(systemClipboard) { PlainTextClipboardManager(systemClipboard) }
 
-    CompositionLocalProvider(LocalClipboardManager provides plainClipboard) {
+    val customSelectionColors = TextSelectionColors(
+        handleColor = MaterialTheme.colorScheme.primary,
+        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+    )
+    CompositionLocalProvider(
+        LocalClipboardManager provides plainClipboard,
+        LocalTextSelectionColors provides customSelectionColors
+    ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -709,7 +718,7 @@ fun AddPasswordContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(

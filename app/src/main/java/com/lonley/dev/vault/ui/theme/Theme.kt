@@ -530,7 +530,7 @@ fun VaultTheme(
 
     val customSelectionColors = TextSelectionColors(
         handleColor = colorScheme.primary,
-        backgroundColor = colorScheme.primary.copy(alpha = 0.3f)
+        backgroundColor = colorScheme.primary.copy(alpha = 0.4f)
     )
 
     MaterialTheme(

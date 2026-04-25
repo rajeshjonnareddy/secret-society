@@ -86,6 +86,7 @@ import com.lonley.dev.vault.views.PasswordGeneratorDialog
 import com.lonley.dev.vault.views.VaultBottomBar
 import com.lonley.dev.vault.views.RecoveryEntryScreen
 import com.lonley.dev.vault.views.RecoveryPhraseScreen
+import com.lonley.dev.vault.views.QuickViewDialog
 import com.lonley.dev.vault.views.VaultScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -238,6 +239,7 @@ fun VaultApp(viewModel: VaultViewModel) {
             var showChangePassword by remember { mutableStateOf(false) }
             var showGeneratorDialog by remember { mutableStateOf(false) }
             var generatedPasswordForAdd by remember { mutableStateOf("") }
+            var quickViewEntry by remember { mutableStateOf<PasswordEntry?>(null) }
             val addSheetState = rememberModalBottomSheetState(
                 skipPartiallyExpanded = true
             )
@@ -433,7 +435,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 selectedEntry = current.copy(isFavorite = !current.isFavorite)
                             },
                             onSave = { id, name, username, email, password, website, comments,
-                                       isFavorite, isSubscription, planType, price,
+                                       isFavorite, isSubscription, subscriptionActive, planType, price,
                                        subscriptionEmail, startDate, reminderEnabled,
                                        entryType, phraseWordCount,
                                        walletAddress, seedPhrase, network, exchange ->
@@ -450,6 +452,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     email = email.ifBlank { null },
                                     isFavorite = isFavorite,
                                     isSubscription = isSubscription,
+                                    subscriptionActive = subscriptionActive,
                                     planType = planType,
                                     price = price,
                                     subscriptionEmail = subscriptionEmail,
@@ -471,6 +474,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                                     comments = comments,
                                     isFavorite = isFavorite,
                                     isSubscription = isSubscription,
+                                    subscriptionActive = subscriptionActive,
                                     planType = planType,
                                     price = price,
                                     subscriptionEmail = subscriptionEmail,
@@ -512,6 +516,11 @@ fun VaultApp(viewModel: VaultViewModel) {
                                 }
                                 viewModel.toggleReminder(current.id)
                                 selectedEntry = current.copy(reminderEnabled = !current.reminderEnabled)
+                            },
+                            onToggleSubscriptionActive = {
+                                val current = selectedEntry ?: return@PasswordDetailScreen
+                                viewModel.toggleSubscriptionActive(current.id)
+                                selectedEntry = current.copy(subscriptionActive = !current.subscriptionActive)
                             }
                         )
                     }
@@ -607,8 +616,7 @@ fun VaultApp(viewModel: VaultViewModel) {
                             },
                             onEditEntry = { entry ->
                                 viewModel.resetAutoLockTimer()
-                                selectedEntry = entry
-                                editingEntry = entry
+                                quickViewEntry = entry
                             },
                             onToggleFavorite = { entry ->
                                 viewModel.resetAutoLockTimer()
@@ -722,6 +730,15 @@ fun VaultApp(viewModel: VaultViewModel) {
                     },
                     hapticsEnabled = settingsState.hapticsEnabled,
                     onInteraction = { viewModel.resetAutoLockTimer() }
+                )
+            }
+
+            if (quickViewEntry != null) {
+                QuickViewDialog(
+                    entry = quickViewEntry!!,
+                    onDismiss = { quickViewEntry = null },
+                    onCopyToClipboard = copyToClipboard,
+                    hapticsEnabled = settingsState.hapticsEnabled
                 )
             }
 
@@ -849,6 +866,12 @@ fun ExpressivePasswordDialog(
     val view = LocalView.current
     var masterPasswordInput by remember { mutableStateOf("") }
     var emptyError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            HapticHelper.performReject(view, hapticsEnabled)
+        }
+    }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(

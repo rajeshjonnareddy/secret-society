@@ -85,6 +85,7 @@ class VaultRepository(private val filesDir: File) {
                 put("createdAt", entry.createdAt)
                 put("isFavorite", entry.isFavorite)
                 put("isSubscription", entry.isSubscription)
+                put("subscriptionActive", entry.subscriptionActive)
                 put("planType", entry.planType?.name ?: JSONObject.NULL)
                 put("price", entry.price ?: JSONObject.NULL)
                 put("subscriptionEmail", entry.subscriptionEmail ?: JSONObject.NULL)
@@ -165,6 +166,7 @@ class VaultRepository(private val filesDir: File) {
                 createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
                 isFavorite = obj.optBoolean("isFavorite", false),
                 isSubscription = obj.optBoolean("isSubscription", false),
+                subscriptionActive = obj.optBoolean("subscriptionActive", true),
                 planType = obj.optString("planType", "").let { name ->
                     PlanType.entries.firstOrNull { it.name == name }
                 },

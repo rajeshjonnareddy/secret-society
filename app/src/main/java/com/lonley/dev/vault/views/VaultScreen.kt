@@ -48,6 +48,8 @@ import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
@@ -66,7 +68,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Button
@@ -111,7 +122,16 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import com.lonley.dev.vault.model.EntryType
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.window.Dialog
 import com.lonley.dev.vault.model.formatPrice
+import com.lonley.dev.vault.model.nextRenewalDate
+import com.lonley.dev.vault.util.formatTimestamp
 import com.lonley.dev.vault.model.PasswordEntry
 import com.lonley.dev.vault.model.SettingsState
 import com.lonley.dev.vault.model.SwipeAction
@@ -435,6 +455,36 @@ private fun PasswordEntryItem(
                                 )
                             }
 
+                            // Subscription status pill
+                            if (entry.isSubscription) {
+                                val statusColor = if (entry.subscriptionActive)
+                                    Color(0xFF4CAF50) else Color(0xFFE53935)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(statusColor.copy(alpha = 0.12f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(statusColor)
+                                        )
+                                        Text(
+                                            text = if (entry.subscriptionActive) "Active" else "Inactive",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = statusColor
+                                        )
+                                    }
+                                }
+                            }
+
                         }
                         } // end bottom-pinned Column
                     }
@@ -446,17 +496,6 @@ private fun PasswordEntryItem(
                         verticalArrangement = Arrangement.spacedBy(0.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        IconButton(
-                            onClick = onFavoriteClick,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                contentDescription = if (entry.isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = if (entry.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
                         IconButton(
                             onClick = onCopyClick,
                             modifier = Modifier.size(36.dp)
@@ -473,9 +512,20 @@ private fun PasswordEntryItem(
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit entry",
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = "Quick view",
                                 tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onFavoriteClick,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (entry.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = if (entry.isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (entry.isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -779,7 +829,12 @@ fun VaultScreen(
             else -> true
         }
         matchesSearch && matchesFilter
-    }.sortedWith(compareByDescending<PasswordEntry> { it.isFavorite }.thenBy { it.name.lowercase() })
+    }.sortedWith(
+        if (selectedFilter == "All")
+            compareBy { it.name.lowercase() }
+        else
+            compareByDescending<PasswordEntry> { it.isFavorite }.thenBy { it.name.lowercase() }
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -801,14 +856,16 @@ fun VaultScreen(
                 )
             )
 
-            Text(
-                text = "Your passwords, secured.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (passwordEntries.isNotEmpty()) {
+                Text(
+                    text = "${passwordEntries.size} Rites",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             val topSpacing by animateDpAsState(
-                targetValue = if (isCollapsed && !searchExpanded) 8.dp else 24.dp,
+                targetValue = if (isCollapsed && !searchExpanded) 4.dp else 12.dp,
                 label = "top-spacing"
             )
             val postSearchSpacing by animateDpAsState(
@@ -1083,6 +1140,14 @@ fun VaultScreen(
             )
             Spacer(modifier = Modifier.height(postPillsSpacing))
 
+            Text(
+                text = "Rites",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
             // ── Content area ──
             if (isLoading) {
                 Box(
@@ -1306,6 +1371,428 @@ fun VaultScreen(
     }
 }
 
+// ── Quick-view dialog ──
+
+@Composable
+private fun QuickViewSeedPhraseRow(
+    seedPhrase: String,
+    onCopy: () -> Unit,
+    hapticsEnabled: Boolean = false
+) {
+    val view = LocalView.current
+    val context = LocalContext.current
+    var visible by remember { mutableStateOf(false) }
+
+    // Set FLAG_SECURE when visible
+    DisposableEffect(visible) {
+        val window = (context as? Activity)?.window
+        if (visible) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    val words = seedPhrase.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
+    val columns = 3
+    val iconTint = MaterialTheme.colorScheme.primary
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        // Header row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Seed Phrase",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${words.size}-word phrase",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    visible = !visible
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    contentDescription = if (visible) "Hide" else "Show",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onCopy()
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Word grid
+        val maskedWord = "\u2022\u2022\u2022\u2022\u2022\u2022"
+        val rowCount = (words.size + columns - 1) / columns
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (row in 0 until rowCount) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for (col in 0 until columns) {
+                        val index = row * columns + col
+                        if (index < words.size) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(
+                                        text = "${index + 1}.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = if (visible) words[index] else maskedWord,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickViewFieldRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    label: String,
+    value: String,
+    isSensitive: Boolean = false,
+    onCopy: (() -> Unit)? = null,
+    hapticsEnabled: Boolean = false
+) {
+    val view = LocalView.current
+    var visible by remember { mutableStateOf(!isSensitive) }
+    val context = LocalContext.current
+
+    // Set FLAG_SECURE when sensitive fields are revealed
+    DisposableEffect(visible, isSensitive) {
+        val window = (context as? Activity)?.window
+        if (isSensitive && visible) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        onDispose {
+            if (isSensitive) {
+                window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (visible) value else "\u2022".repeat(value.length.coerceIn(8, 16)),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        if (isSensitive) {
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    visible = !visible
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    contentDescription = if (visible) "Hide" else "Show",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        if (onCopy != null) {
+            IconButton(
+                onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onCopy()
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickViewDialog(
+    entry: PasswordEntry,
+    onDismiss: () -> Unit,
+    onCopyToClipboard: (String) -> Unit,
+    hapticsEnabled: Boolean = false
+) {
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    val iconTint = MaterialTheme.colorScheme.primary
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp
+        ) {
+            Column(modifier = Modifier.padding(vertical = 20.dp)) {
+                // Title row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = entry.name.replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Fields based on entry type
+                when (entry.entryType) {
+                    EntryType.CryptoWallet -> {
+                        // Wallet Address
+                        if (!entry.walletAddress.isNullOrBlank()) {
+                            QuickViewFieldRow(
+                                icon = Icons.Outlined.AccountBalanceWallet,
+                                iconTint = iconTint,
+                                label = "Wallet Address",
+                                value = entry.walletAddress,
+                                isSensitive = true,
+                                onCopy = { onCopyToClipboard(entry.walletAddress) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        // Seed Phrase / Password
+                        if (!entry.seedPhrase.isNullOrBlank()) {
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                            QuickViewSeedPhraseRow(
+                                seedPhrase = entry.seedPhrase,
+                                onCopy = { onCopyToClipboard(entry.seedPhrase) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                        } else if (entry.password.isNotBlank()) {
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                            QuickViewFieldRow(
+                                icon = Icons.Outlined.Lock,
+                                iconTint = iconTint,
+                                label = "Password",
+                                value = entry.password,
+                                isSensitive = true,
+                                onCopy = { onCopyToClipboard(entry.password) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                        }
+                    }
+                    else -> {
+                        // Username
+                        if (!entry.username.isNullOrBlank()) {
+                            QuickViewFieldRow(
+                                icon = Icons.Outlined.Person,
+                                iconTint = iconTint,
+                                label = "Username",
+                                value = entry.username,
+                                onCopy = { onCopyToClipboard(entry.username) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        // Email
+                        if (!entry.email.isNullOrBlank()) {
+                            QuickViewFieldRow(
+                                icon = Icons.Outlined.Email,
+                                iconTint = iconTint,
+                                label = "Email",
+                                value = entry.email,
+                                onCopy = { onCopyToClipboard(entry.email) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                        // Password
+                        if (entry.password.isNotBlank()) {
+                            QuickViewFieldRow(
+                                icon = Icons.Outlined.Lock,
+                                iconTint = iconTint,
+                                label = "Password",
+                                value = entry.password,
+                                isSensitive = true,
+                                onCopy = { onCopyToClipboard(entry.password) },
+                                hapticsEnabled = hapticsEnabled
+                            )
+                        }
+                        // Subscription fields
+                        if (entry.isSubscription) {
+                            if (!entry.price.isNullOrBlank()) {
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                                QuickViewFieldRow(
+                                    icon = Icons.Outlined.AttachMoney,
+                                    iconTint = iconTint,
+                                    label = "Price",
+                                    value = "$${formatPrice(entry.price)}"
+                                )
+                            }
+                            if (entry.startDate != null) {
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                                QuickViewFieldRow(
+                                    icon = Icons.Outlined.CalendarToday,
+                                    iconTint = iconTint,
+                                    label = "Start Date",
+                                    value = formatTimestamp(entry.startDate)
+                                )
+                            }
+                            val nextRenewal = entry.nextRenewalDate()
+                            if (nextRenewal != null) {
+                                HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                                QuickViewFieldRow(
+                                    icon = Icons.Outlined.Event,
+                                    iconTint = iconTint,
+                                    label = "Next Renewal",
+                                    value = formatTimestamp(nextRenewal)
+                                )
+                            }
+                            // Subscription status
+                            HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
+                            QuickViewFieldRow(
+                                icon = if (entry.subscriptionActive) Icons.Outlined.CheckCircle else Icons.Outlined.Cancel,
+                                iconTint = if (entry.subscriptionActive) Color(0xFF4CAF50) else Color(0xFFF44336),
+                                label = "Status",
+                                value = if (entry.subscriptionActive) "Active" else "Inactive"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Shared bottom bar (rendered outside AnimatedContent in VaultApp) ──
 
 @Composable
@@ -1349,6 +1836,7 @@ fun VaultBottomBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)
             ) {
+                // Lock
                 IconButton(onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     onLockClick()
@@ -1360,6 +1848,19 @@ fun VaultBottomBar(
                         modifier = iconSize
                     )
                 }
+                // Password generator
+                IconButton(onClick = {
+                    HapticHelper.performClick(view, hapticsEnabled)
+                    onGeneratePasswordClick()
+                }, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        imageVector = Icons.Outlined.Password,
+                        contentDescription = "Generate Password",
+                        tint = iconTint,
+                        modifier = iconSize
+                    )
+                }
+                // Download
                 IconButton(onClick = {
                     HapticHelper.performClick(view, hapticsEnabled)
                     onDownloadClick()
@@ -1388,18 +1889,6 @@ fun VaultBottomBar(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = "Profile",
                         tint = if (currentScreen == "profile") activeIconTint else iconTint,
-                        modifier = iconSize
-                    )
-                }
-                // Password generator
-                IconButton(onClick = {
-                    HapticHelper.performClick(view, hapticsEnabled)
-                    onGeneratePasswordClick()
-                }, modifier = Modifier.size(48.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Password,
-                        contentDescription = "Generate Password",
-                        tint = iconTint,
                         modifier = iconSize
                     )
                 }
