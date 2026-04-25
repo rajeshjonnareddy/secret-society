@@ -1779,12 +1779,55 @@ fun QuickViewDialog(
                             }
                             // Subscription status
                             HorizontalDivider(thickness = 0.5.dp, color = dividerColor, modifier = Modifier.padding(horizontal = 16.dp))
-                            QuickViewFieldRow(
-                                icon = if (entry.subscriptionActive) Icons.Outlined.CheckCircle else Icons.Outlined.Cancel,
-                                iconTint = if (entry.subscriptionActive) Color(0xFF4CAF50) else Color(0xFFF44336),
-                                label = "Status",
-                                value = if (entry.subscriptionActive) "Active" else "Inactive"
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(iconTint.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Repeat,
+                                        contentDescription = null,
+                                        tint = iconTint,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Status",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (entry.subscriptionActive) Color(0xFF4CAF50)
+                                                    else Color(0xFFF44336)
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (entry.subscriptionActive) "Active" else "Inactive",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
